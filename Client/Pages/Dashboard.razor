@@ -1,0 +1,137 @@
+@page "/dashboard"
+@using System.Text.Json
+@using GolfStatsApp.Shared
+@inject HttpClient Http
+
+@code {
+  private List<TeamStats> Stats = new();
+  private string currentSortColumn = "TeamName";
+  private bool sortAscending = true;
+
+  
+
+    private List<TeamStats> SortStats(List<TeamStats> stats, string column, bool ascending)
+    {
+        return column switch
+        {
+            "TeamName" => ascending ? stats.OrderBy(s => s.TeamName).ToList()
+                                      : stats.OrderByDescending(s => s.TeamName).ToList(),
+            "OverallAverage" => ascending ? stats.OrderBy(s => s.OverallAverage).ToList()
+                                : stats.OrderByDescending(s => s.OverallAverage).ToList(),
+            "AverageWithRoster" => ascending ? stats.OrderBy(s => s.AverageWithRoster).ToList()
+                                : stats.OrderByDescending(s => s.AverageWithRoster).ToList(),
+            "BestTournamentScore" => ascending ? stats.OrderBy(s => s.BestTournamentScore).ToList()
+                                : stats.OrderByDescending(s => s.BestTournamentScore).ToList(),
+            "WorstTournamentScore" => ascending ? stats.OrderBy(s => s.WorstTournamentScore).ToList()
+                                : stats.OrderByDescending(s => s.WorstTournamentScore).ToList(),
+            "LongestRosterStreak" => ascending ? stats.OrderBy(s => s.LongestRosterStreak).ToList()
+                                : stats.OrderByDescending(s => s.LongestRosterStreak).ToList(),
+            "Wins" => ascending ? stats.OrderBy(s => s.Wins).ToList()
+                                : stats.OrderByDescending(s => s.Wins).ToList(),
+            "Majors" => ascending ? stats.OrderBy(s => s.Majors).ToList()
+                                : stats.OrderByDescending(s => s.Majors).ToList(),
+            "SignatureEvents" => ascending ? stats.OrderBy(s => s.SignatureEvents).ToList()
+                                : stats.OrderByDescending(s => s.SignatureEvents).ToList(),
+            "Regulars" => ascending ? stats.OrderBy(s => s.Regulars).ToList()
+                                : stats.OrderByDescending(s => s.Regulars).ToList(),
+            _ => stats
+        };
+    }
+
+    private void SortByColumn(string columnName)
+    {
+        if (currentSortColumn == columnName)
+            sortAscending = !sortAscending;
+        else
+        {
+            currentSortColumn = columnName;
+            sortAscending = true;
+        }
+
+        Stats = SortStats(Stats, currentSortColumn, sortAscending);
+    }
+
+    private MarkupString SortIcon(string column)
+    {
+        if (currentSortColumn != column) return new MarkupString("");
+
+        var icon = sortAscending ? "▲" : "▼";
+        return new MarkupString($" {icon}");
+
+    }  
+
+    protected override async Task OnInitializedAsync()
+    {
+        var json = await Http.GetStringAsync("data/teamstats.json");
+        Stats = JsonSerializer.Deserialize<List<TeamStats>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<TeamStats>();
+    }
+    
+}
+@if (Stats == null)
+{
+    <p>Loading stats...</p>
+}
+else
+{
+    <table class="table table-striped table-responsive">
+        <thead>
+            <tr>
+                <th style="cursor: pointer;" @onclick='() => SortByColumn("TeamName")'>
+                    Team @SortIcon("TeamName")
+                </th>
+                <th style="cursor: pointer;" @onclick='() => SortByColumn("OverallAverage")'>
+                    Overall Avg @SortIcon("OverallAverage")
+                </th>
+                <th style="cursor: pointer;" @onclick='() => SortByColumn("AverageWithRoster")'>
+                    Avg (Roster) @SortIcon("AverageWithRoster")
+                </th>
+                <th style="cursor: pointer;" @onclick='() => SortByColumn("BestTournamentScore")'>
+                    Best Score @SortIcon("BestTournamentScore")
+                </th>
+                <th>Best Tourney</th>
+                <th style="cursor: pointer;" @onclick='() => SortByColumn("WorstTournamentScore")'>
+                    Worst Score @SortIcon("WorstTournamentScore")
+                </th>
+                <th>Worst Tourney</th>
+                <th style="cursor: pointer;" @onclick='() => SortByColumn("LongestRosterStreak")'>
+                    Streak @SortIcon("LongestRosterStreak")
+                </th>
+                <th style="cursor: pointer;" @onclick='() => SortByColumn("Wins")'>
+                    Wins @SortIcon("Wins")
+                </th>
+                <th style="cursor: pointer;" @onclick='() => SortByColumn("Majors")'>
+                    Majors @SortIcon("Majors")
+                </th>
+                <th style="cursor: pointer;" @onclick='() => SortByColumn("SignatureEvents")'>
+                    Signatures @SortIcon("SignatureEvents")
+                </th>
+                <th style="cursor: pointer;" @onclick='() => SortByColumn("Regulars")'>
+                    Regulars @SortIcon("Regulars")
+                </th>
+                @* <th>Actions</th> *@
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var team in Stats)
+        {
+            <tr>
+                <td>@team.TeamName</td>
+                <td>@team.OverallAverage</td>
+                <td>@team.AverageWithRoster</td>
+                <td>@team.BestTournamentScore</td>
+                <td>@team.BestTournament</td>
+                <td>@team.WorstTournamentScore</td>
+                <td>@team.WorstTournament</td>
+                <td>@team.LongestRosterStreak</td>
+                <td>@team.Wins</td>
+                <td>@team.Majors</td>
+                <td>@team.SignatureEvents</td>
+                <td>@team.Regulars</td>
+                @* <td><button class="btn btn-sm btn-primary" @onclick="() => EditTeam(team)">Edit</button></td> *@
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@* <EditModal TeamToEdit="SelectedTeam" OnSave="HandleSave" /> *@

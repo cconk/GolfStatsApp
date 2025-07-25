@@ -1,0 +1,72 @@
+[
+  {
+    "TeamName": "WarrenC",
+    "OverallAverage": 382.89,
+    "AverageWithRoster": 382.89,
+    "BestTournamentScore": 552,
+    "BestTournament": "RBC Heritage",
+    "WorstTournamentScore": 253,
+    "WorstTournament": "John Deere Classic",
+    "LongestRosterStreak": 28,
+    "Wins": 6,
+    "Majors": 1,
+    "SignatureEvents": 2,
+    "Regulars": 3
+  },
+  {
+    "TeamName": "Itinker",
+    "OverallAverage": 351.79,
+    "AverageWithRoster": 394.0,
+    "BestTournamentScore": 563,
+    "BestTournament": "The Open Championship",
+    "WorstTournamentScore": 188,
+    "WorstTournament": "Sony Open in Hawaii",
+    "LongestRosterStreak": 15,
+    "Wins": 5,
+    "Majors": 1,
+    "SignatureEvents": 2,
+    "Regulars": 2
+  },
+  {
+    "TeamName": "CarlSpackler",
+    "OverallAverage": 334.82,
+    "AverageWithRoster": 407.61,
+    "BestTournamentScore": 637,
+    "BestTournament": "The Open Championship",
+    "WorstTournamentScore": 216,
+    "WorstTournament": "John Deere Classic",
+    "LongestRosterStreak": 11,
+    "Wins": 5,
+    "Majors": 2,
+    "SignatureEvents": 1,
+    "Regulars": 2
+  },
+  {
+    "TeamName": "Grip it and Sip it",
+    "OverallAverage": 249.39,
+    "AverageWithRoster": 387.94,
+    "BestTournamentScore": 592,
+    "BestTournament": "Texas Children's Houston Open",
+    "WorstTournamentScore": 215,
+    "WorstTournament": "Rocket Classic",
+    "LongestRosterStreak": 18,
+    "Wins": 6,
+    "Majors": 0,
+    "SignatureEvents": 2,
+    "Regulars": 4
+  },
+  {
+    "TeamName": "conklind",
+    "OverallAverage": 390.71,
+    "AverageWithRoster": 405.19,
+    "BestTournamentScore": 625,
+    "BestTournament": "The Open Championship",
+    "WorstTournamentScore": 236,
+    "WorstTournament": "Arnold Palmer Invitational presented by Mastercard",
+    "LongestRosterStreak": 24,
+    "Wins": 7,
+    "Majors": 0,
+    "SignatureEvents": 2,
+    "Regulars": 5
+  }
+]
