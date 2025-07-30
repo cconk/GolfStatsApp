@@ -61,13 +61,13 @@ jobs:
           echo "Checking current Azure context..."
           az account show
           echo "Checking if App Service exists..."
-          az webapp show --name golfstatsapp-csangggvd5hwbtfm --resource-group GolfStatsApp --query "name" -o tsv || echo "App Service not found or no access"
+          az webapp show --name GolfStatsApp --resource-group GolfStatsApp --query "name" -o tsv || echo "App Service not found or no access"
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'golfstatsapp-csangggvd5hwbtfm'
+          app-name: 'GolfStatsApp'
           slot-name: 'Production'
           package: .
           
