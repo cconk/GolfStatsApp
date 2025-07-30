@@ -54,10 +54,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          auth-type: IDENTITY
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_5497efe8-58c1-4caa-ac38-6042c2e53532 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_f685193c-d815-4ae7-856c-1fe2098d36d1 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_33e5cd70-5215-4db3-a28b-0f5910081dbf }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Verify Azure Context and App Service
         run: |
