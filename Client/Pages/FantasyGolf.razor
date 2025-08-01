@@ -1,0 +1,430 @@
+@page "/fantasy-golf"
+@using System.Text.Json
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Fantasy Golf Simulator</PageTitle>
+
+<h1>Fantasy Golf Scoring Simulator</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>Player Configuration</h4>
+            </div>
+            <div class="card-body">
+                @if (availablePlayers == null)
+                {
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading players...</span>
+                        </div>
+                        <p>Loading player data...</p>
+                    </div>
+                }
+                else
+                {
+                    <form @onsubmit="RunSimulation" @onsubmit:preventDefault="true">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="eventType" class="form-label">Event Type</label>
+                                <select class="form-select" id="eventType" @bind="selectedEventType">
+                                    <option value="major">Major</option>
+                                    <option value="pga">PGA Tour</option>
+                                    <option value="signature">Signature Event</option>
+                                    <option value="additional">Additional Event</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="captain" class="form-label">Captain</label>
+                                <select class="form-select" id="captain" @bind="selectedCaptain">
+                                    <option value="">Select Captain</option>
+                                    @foreach (var player in players.Where(p => !string.IsNullOrEmpty(p.Name)))
+                                    {
+                                        <option value="@player.Name">@player.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <h5>Starting Players</h5>
+                        <div class="row mb-2">
+                            <div class="col-md-4"><strong>Player Name</strong></div>
+                            <div class="col-md-2"><strong>Birdies/Round</strong></div>
+                            <div class="col-md-2"><strong>Bogeys/Round</strong></div>
+                            <div class="col-md-3"><strong>Cut Probability (%)</strong></div>
+                            <div class="col-md-1"><strong>Actions</strong></div>
+                        </div>
+                        @for (int i = 0; i < players.Count; i++)
+                        {
+                            var player = players[i];
+                            var index = i; // Capture for lambda
+                            <div class="row mb-2">
+                                <div class="col-md-4">
+                                    <select class="form-select" @onchange="(e) => OnPlayerSelected(index, e.Value?.ToString())">
+                                        <option value="">Select Player</option>
+                                        @foreach (var availablePlayer in availablePlayers.Where(ap => !IsPlayerAlreadySelected(ap.PlayerName, index)))
+                                        {
+                                            <option value="@availablePlayer.PlayerName" selected="@(player.Name == availablePlayer.PlayerName)">
+                                                @availablePlayer.PlayerName
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" class="form-control" readonly
+                                           value="@player.Birdies.ToString("F2")" />
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" class="form-control" readonly
+                                           value="@player.Bogeys.ToString("F2")" />
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-center">
+                                        <input type="range" class="form-range me-2" min="0" max="100" 
+                                               @bind="player.CutProbabilityPercent" @bind:event="oninput" />
+                                        <span class="text-nowrap">@player.CutProbabilityPercent%</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                                            @onclick="() => RemovePlayer(index)">×</button>
+                                </div>
+                            </div>
+                        }
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <button type="button" class="btn btn-outline-success" 
+                                        @onclick="AddPlayer" 
+                                        disabled="@(players.Count >= 4)">
+                                    Add Player (@players.Count/4)
+                                </button>
+                            </div>
+                        </div>
+
+                        <h5>Bench Players</h5>
+                        <div class="row mb-2">
+                            <div class="col-md-4"><strong>Player Name</strong></div>
+                            <div class="col-md-2"><strong>Birdies/Round</strong></div>
+                            <div class="col-md-2"><strong>Bogeys/Round</strong></div>
+                            <div class="col-md-3"><strong>Cut Probability (%)</strong></div>
+                            <div class="col-md-1"><strong>Actions</strong></div>
+                        </div>
+                        @for (int i = 0; i < benchPlayers.Count; i++)
+                        {
+                            var bench = benchPlayers[i];
+                            var index = i; // Capture for lambda
+                            <div class="row mb-2">
+                                <div class="col-md-4">
+                                    <select class="form-select" @onchange="(e) => OnBenchPlayerSelected(index, e.Value?.ToString())">
+                                        <option value="">Select Player</option>
+                                        @foreach (var availablePlayer in availablePlayers.Where(ap => !IsPlayerAlreadySelected(ap.PlayerName, -1, index)))
+                                        {
+                                            <option value="@availablePlayer.PlayerName" selected="@(bench.Name == availablePlayer.PlayerName)">
+                                                @availablePlayer.PlayerName
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" class="form-control" readonly
+                                           value="@bench.Birdies.ToString("F2")" />
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" class="form-control" readonly
+                                           value="@bench.Bogeys.ToString("F2")" />
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-center">
+                                        <input type="range" class="form-range me-2" min="0" max="100" 
+                                               @bind="bench.CutProbabilityPercent" @bind:event="oninput" />
+                                        <span class="text-nowrap">@bench.CutProbabilityPercent%</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                                            @onclick="() => RemoveBenchPlayer(index)">×</button>
+                                </div>
+                            </div>
+                        }
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <button type="button" class="btn btn-outline-success" 
+                                        @onclick="AddBenchPlayer" 
+                                        disabled="@(benchPlayers.Count >= 2)">
+                                    Add Bench Player (@benchPlayers.Count/2)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                    @if (isLoading)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                        <span>Running Simulation...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Run Simulation</span>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        @if (simulationResult != null)
+        {
+            <div class="card">
+                <div class="card-header">
+                    <h4>Simulation Results</h4>
+                </div>
+                <div class="card-body">
+                    <h6>Team Score Distribution</h6>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            10th Percentile
+                            <span class="badge bg-secondary rounded-pill">@simulationResult.Percentile10th.ToString("F1")</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            50th Percentile (Median)
+                            <span class="badge bg-primary rounded-pill">@simulationResult.Percentile50th.ToString("F1")</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            90th Percentile
+                            <span class="badge bg-success rounded-pill">@simulationResult.Percentile90th.ToString("F1")</span>
+                        </li>
+                    </ul>
+                    
+                    @if (simulationResult.PlayerPercentiles != null && simulationResult.PlayerPercentiles.Any())
+                    {
+                        <h6 class="mt-3">Individual Player Percentiles</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Player</th>
+                                        <th>10th %ile</th>
+                                        <th>50th %ile</th>
+                                        <th>90th %ile</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var player in simulationResult.PlayerPercentiles.OrderByDescending(p => p.Percentile50th))
+                                    {
+                                        <tr class="@(player.IsCaptain ? "table-warning" : "")">
+                                            <td>
+                                                @player.Name
+                                                @if (player.IsCaptain)
+                                                {
+                                                    <span class="badge bg-warning text-dark ms-1">C</span>
+                                                }
+                                            </td>
+                                            <td>@player.Percentile10th.ToString("F1")</td>
+                                            <td>@player.Percentile50th.ToString("F1")</td>
+                                            <td>@player.Percentile90th.ToString("F1")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger mt-3" role="alert">
+                @errorMessage
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<GolfPlayer> players = new();
+    private List<BenchPlayer> benchPlayers = new();
+    private List<GolfPlayerData>? availablePlayers;
+    private string selectedEventType = "major";
+    private string selectedCaptain = "";
+    private bool isLoading = false;
+    private string? errorMessage;
+    private SimulationResult? simulationResult;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAvailablePlayers();
+    }
+
+    private async Task LoadAvailablePlayers()
+    {
+        try
+        {
+            availablePlayers = await Http.GetFromJsonAsync<List<GolfPlayerData>>("/api/PlayerData/players");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading player data: {ex.Message}";
+        }
+    }
+
+    private void OnPlayerSelected(int index, string? playerName)
+    {
+        if (string.IsNullOrEmpty(playerName) || availablePlayers == null) return;
+
+        var selectedPlayer = availablePlayers.FirstOrDefault(p => p.PlayerName == playerName);
+        if (selectedPlayer != null && index < players.Count)
+        {
+            players[index].Name = selectedPlayer.PlayerName;
+            players[index].Birdies = selectedPlayer.Birdies;
+            players[index].Bogeys = selectedPlayer.Bogeys;
+            // Keep existing cut probability or set default
+            if (players[index].CutProbability == 0)
+                players[index].CutProbability = 0.8; // Default 80%
+        }
+    }
+
+    private void OnBenchPlayerSelected(int index, string? playerName)
+    {
+        if (string.IsNullOrEmpty(playerName) || availablePlayers == null) return;
+
+        var selectedPlayer = availablePlayers.FirstOrDefault(p => p.PlayerName == playerName);
+        if (selectedPlayer != null && index < benchPlayers.Count)
+        {
+            benchPlayers[index].Name = selectedPlayer.PlayerName;
+            benchPlayers[index].Birdies = selectedPlayer.Birdies;
+            benchPlayers[index].Bogeys = selectedPlayer.Bogeys;
+            // Keep existing cut probability or set default
+            if (benchPlayers[index].CutProbability == 0)
+                benchPlayers[index].CutProbability = 0.7; // Default 70%
+        }
+    }
+
+    private bool IsPlayerAlreadySelected(string playerName, int currentPlayerIndex = -1, int currentBenchIndex = -1)
+    {
+        // Check if player is already selected in starting lineup (excluding current index)
+        for (int i = 0; i < players.Count; i++)
+        {
+            if (i != currentPlayerIndex && players[i].Name == playerName)
+                return true;
+        }
+
+        // Check if player is already selected in bench (excluding current index)
+        for (int i = 0; i < benchPlayers.Count; i++)
+        {
+            if (i != currentBenchIndex && benchPlayers[i].Name == playerName)
+                return true;
+        }
+
+        return false;
+    }
+
+    private void AddPlayer()
+    {
+        if (players.Count < 4)
+        {
+            players.Add(new GolfPlayer { CutProbability = 0.8 }); // Default 80%
+        }
+    }
+
+    private void RemovePlayer(int index)
+    {
+        if (index >= 0 && index < players.Count)
+        {
+            // If removing the captain, clear captain selection
+            if (players[index].Name == selectedCaptain)
+            {
+                selectedCaptain = "";
+            }
+            players.RemoveAt(index);
+        }
+    }
+
+    private void AddBenchPlayer()
+    {
+        if (benchPlayers.Count < 2)
+        {
+            benchPlayers.Add(new BenchPlayer { CutProbability = 0.7 }); // Default 70%
+        }
+    }
+
+    private void RemoveBenchPlayer(int index)
+    {
+        if (index >= 0 && index < benchPlayers.Count)
+        {
+            benchPlayers.RemoveAt(index);
+        }
+    }
+
+    private async Task RunSimulation()
+    {
+        if (players.Count < 1 || players.Count > 4)
+        {
+            errorMessage = "Please add between 1 and 4 starting players.";
+            return;
+        }
+
+        if (benchPlayers.Count > 2)
+        {
+            errorMessage = "You can have a maximum of 2 bench players.";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(selectedCaptain))
+        {
+            errorMessage = "Please select a captain from your starting players.";
+            return;
+        }
+
+        // Verify captain is actually in the starting lineup
+        if (!players.Any(p => p.Name == selectedCaptain))
+        {
+            errorMessage = "Captain must be selected from your starting players.";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = null;
+        
+        try
+        {
+            var request = new SimulationRequest
+            {
+                EventType = selectedEventType,
+                Captain = selectedCaptain,
+                Players = players.Where(p => !string.IsNullOrEmpty(p.Name)).ToList(),
+                BenchPlayers = benchPlayers.Where(p => !string.IsNullOrEmpty(p.Name)).ToList()
+            };
+
+            var response = await Http.PostAsJsonAsync("/api/FantasyGolf/simulate", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                simulationResult = await response.Content.ReadFromJsonAsync<SimulationResult>();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Simulation failed: {response.StatusCode} - {errorContent}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error running simulation: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
