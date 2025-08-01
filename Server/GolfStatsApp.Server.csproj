@@ -19,4 +19,10 @@
     <ProjectReference Include="..\Shared\GolfStatsApp.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Data\merged_golf_stats.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

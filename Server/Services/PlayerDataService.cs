@@ -36,13 +36,46 @@ namespace GolfStatsApp.Server.Services
             try
             {
                 var filePath = Path.Combine(_environment.ContentRootPath, "Data", "merged_golf_stats.csv");
+                _logger.LogInformation($"Environment: {_environment.EnvironmentName}");
+                _logger.LogInformation($"ContentRootPath: {_environment.ContentRootPath}");
+                _logger.LogInformation($"WebRootPath: {_environment.WebRootPath}");
                 _logger.LogInformation($"Attempting to load CSV from: {filePath}");
+                
+                // Also check if the Data directory exists
+                var dataDir = Path.Combine(_environment.ContentRootPath, "Data");
+                _logger.LogInformation($"Data directory exists: {Directory.Exists(dataDir)}");
+                if (Directory.Exists(dataDir))
+                {
+                    var files = Directory.GetFiles(dataDir);
+                    _logger.LogInformation($"Files in Data directory: {string.Join(", ", files)}");
+                }
                 
                 if (!File.Exists(filePath))
                 {
                     _logger.LogWarning($"CSV file not found at: {filePath}");
-                    _players = new List<GolfPlayerData>();
-                    return;
+                    
+                    // Try alternative locations
+                    var altPath1 = Path.Combine(_environment.WebRootPath ?? "", "Data", "merged_golf_stats.csv");
+                    var altPath2 = Path.Combine(Directory.GetCurrentDirectory(), "Data", "merged_golf_stats.csv");
+                    var altPath3 = Path.Combine(Directory.GetCurrentDirectory(), "merged_golf_stats.csv");
+                    
+                    _logger.LogInformation($"Checking alternative path 1: {altPath1} - Exists: {File.Exists(altPath1)}");
+                    _logger.LogInformation($"Checking alternative path 2: {altPath2} - Exists: {File.Exists(altPath2)}");
+                    _logger.LogInformation($"Checking alternative path 3: {altPath3} - Exists: {File.Exists(altPath3)}");
+                    
+                    if (File.Exists(altPath1))
+                        filePath = altPath1;
+                    else if (File.Exists(altPath2))
+                        filePath = altPath2;
+                    else if (File.Exists(altPath3))
+                        filePath = altPath3;
+                    else
+                    {
+                        _players = new List<GolfPlayerData>();
+                        return;
+                    }
+                    
+                    _logger.LogInformation($"Using alternative path: {filePath}");
                 }
 
                 var lines = await File.ReadAllLinesAsync(filePath);
