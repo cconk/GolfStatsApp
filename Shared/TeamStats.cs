@@ -12,9 +12,9 @@ namespace GolfStatsApp.Shared
         public int WorstTournamentScore { get; set; }
         public string WorstTournament { get; set; } = string.Empty;
         public int LongestRosterStreak { get; set; }
-        public int Wins { get; set; }
-        public int Majors { get; set; }
-        public int SignatureEvents { get; set; }
-        public int Regulars { get; set; }
+        public double Wins { get; set; }
+        public double Majors { get; set; }
+        public double SignatureEvents { get; set; }
+        public double Regulars { get; set; }
     }
 }
