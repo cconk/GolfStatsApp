@@ -1,14 +1,25 @@
 .navbar-toggler {
     background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 .top-row {
     height: 3.5rem;
-    background-color: rgba(0,0,0,0.4);
+    background-color: rgba(0,0,0,0.25);
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    padding-right: 1rem;
 }
 
 .navbar-brand {
     font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.nav-link {
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .oi {
@@ -58,5 +69,10 @@
     .collapse {
         /* Never collapse the sidebar for wide screens */
         display: block;
+    }
+
+    .nav-scrollable {
+        height: calc(100vh - 3.5rem);
+        overflow-y: auto;
     }
 }

@@ -420,3 +420,6 @@ wwwroot/.well-known/
 
 # User secrets
 secrets.json
+
+# Python virtual environments
+.venv/

@@ -1,25 +1,27 @@
 ﻿@page "/"
 
+<PageTitle>Golf Stats App</PageTitle>
+
 <h1>Golf Stats App</h1>
 
-<p>Welcome to the Golf Stats App! Track and analyze golf tournament statistics for teams and players.</p>
+<p class="lead text-muted">Welcome to the Golf Stats App! Track and analyze golf tournament statistics for teams and players.</p>
 
-<div class="row">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
+<div class="row g-4">
+    <div class="col-12 col-md-6">
+        <div class="card h-100 card-hover">
+            <div class="card-body d-flex flex-column">
                 <h5 class="card-title">Dashboard</h5>
                 <p class="card-text">View comprehensive team statistics including averages, best/worst scores, wins, and tournament results.</p>
-                <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+                <a href="dashboard" class="btn btn-primary mt-auto align-self-start">Go to Dashboard</a>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
+    <div class="col-12 col-md-6">
+        <div class="card h-100 card-hover">
+            <div class="card-body d-flex flex-column">
                 <h5 class="card-title">Fantasy Golf Simulator</h5>
                 <p class="card-text">Run Monte Carlo simulations to predict fantasy golf scoring based on player statistics and tournament conditions.</p>
-                <a href="/fantasy-golf" class="btn btn-success">Go to Fantasy Golf</a>
+                <a href="fantasy-golf" class="btn btn-success mt-auto align-self-start">Go to Fantasy Golf</a>
             </div>
         </div>
     </div>

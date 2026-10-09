@@ -6,9 +6,10 @@
 <PageTitle>Fantasy Golf Simulator</PageTitle>
 
 <h1>Fantasy Golf Scoring Simulator</h1>
+<p class="text-muted">Pick your lineup, adjust cut probabilities, and run a Monte Carlo simulation.</p>
 
-<div class="row">
-    <div class="col-md-8">
+<div class="row g-4">
+    <div class="col-12 col-xl-8">
         <div class="card">
             <div class="card-header">
                 <h4>Player Configuration</h4>
@@ -49,19 +50,20 @@
                         </div>
 
                         <h5>Starting Players</h5>
-                        <div class="row mb-2">
-                            <div class="col-md-4"><strong>Player Name</strong></div>
-                            <div class="col-md-2"><strong>Birdies/Round</strong></div>
-                            <div class="col-md-2"><strong>Bogeys/Round</strong></div>
-                            <div class="col-md-3"><strong>Cut Probability (%)</strong></div>
-                            <div class="col-md-1"><strong>Actions</strong></div>
+                        <div class="row mb-2 d-none d-lg-flex small text-muted text-uppercase">
+                            <div class="col-lg-4"><strong>Player Name</strong></div>
+                            <div class="col-lg-2"><strong>Birdies/Round</strong></div>
+                            <div class="col-lg-2"><strong>Bogeys/Round</strong></div>
+                            <div class="col-lg-3"><strong>Cut Probability (%)</strong></div>
+                            <div class="col-lg-1"></div>
                         </div>
                         @for (int i = 0; i < players.Count; i++)
                         {
                             var player = players[i];
                             var index = i; // Capture for lambda
-                            <div class="row mb-2">
-                                <div class="col-md-4">
+                            <div class="row g-2 mb-2 align-items-center player-row">
+                                <div class="col-12 col-lg-4">
+                                    <label class="form-label small text-muted d-lg-none mb-1">Player</label>
                                     <select class="form-select" @onchange="(e) => OnPlayerSelected(index, e.Value?.ToString())">
                                         <option value="">Select Player</option>
                                         @foreach (var availablePlayer in availablePlayers.Where(ap => !IsPlayerAlreadySelected(ap.PlayerName, index)))
@@ -72,23 +74,26 @@
                                         }
                                     </select>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-6 col-lg-2">
+                                    <label class="form-label small text-muted d-lg-none mb-1">Birdies/Round</label>
                                     <input type="number" class="form-control" readonly
                                            value="@player.Birdies.ToString("F2")" />
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-6 col-lg-2">
+                                    <label class="form-label small text-muted d-lg-none mb-1">Bogeys/Round</label>
                                     <input type="number" class="form-control" readonly
                                            value="@player.Bogeys.ToString("F2")" />
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-10 col-lg-3">
+                                    <label class="form-label small text-muted d-lg-none mb-1">Cut Probability</label>
                                     <div class="d-flex align-items-center">
                                         <input type="range" class="form-range me-2" min="0" max="100" 
                                                @bind="player.CutProbabilityPercent" @bind:event="oninput" />
                                         <span class="text-nowrap">@player.CutProbabilityPercent%</span>
                                     </div>
                                 </div>
-                                <div class="col-md-1">
-                                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                                <div class="col-2 col-lg-1 text-end">
+                                    <button type="button" class="btn btn-outline-danger btn-sm" title="Remove player" aria-label="Remove player"
                                             @onclick="() => RemovePlayer(index)">×</button>
                                 </div>
                             </div>
@@ -104,20 +109,21 @@
                             </div>
                         </div>
 
-                        <h5>Bench Players</h5>
-                        <div class="row mb-2">
-                            <div class="col-md-4"><strong>Player Name</strong></div>
-                            <div class="col-md-2"><strong>Birdies/Round</strong></div>
-                            <div class="col-md-2"><strong>Bogeys/Round</strong></div>
-                            <div class="col-md-3"><strong>Cut Probability (%)</strong></div>
-                            <div class="col-md-1"><strong>Actions</strong></div>
+                        <h5 class="mt-4">Bench Players</h5>
+                        <div class="row mb-2 d-none d-lg-flex small text-muted text-uppercase">
+                            <div class="col-lg-4"><strong>Player Name</strong></div>
+                            <div class="col-lg-2"><strong>Birdies/Round</strong></div>
+                            <div class="col-lg-2"><strong>Bogeys/Round</strong></div>
+                            <div class="col-lg-3"><strong>Cut Probability (%)</strong></div>
+                            <div class="col-lg-1"></div>
                         </div>
                         @for (int i = 0; i < benchPlayers.Count; i++)
                         {
                             var bench = benchPlayers[i];
                             var index = i; // Capture for lambda
-                            <div class="row mb-2">
-                                <div class="col-md-4">
+                            <div class="row g-2 mb-2 align-items-center player-row">
+                                <div class="col-12 col-lg-4">
+                                    <label class="form-label small text-muted d-lg-none mb-1">Player</label>
                                     <select class="form-select" @onchange="(e) => OnBenchPlayerSelected(index, e.Value?.ToString())">
                                         <option value="">Select Player</option>
                                         @foreach (var availablePlayer in availablePlayers.Where(ap => !IsPlayerAlreadySelected(ap.PlayerName, -1, index)))
@@ -128,23 +134,26 @@
                                         }
                                     </select>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-6 col-lg-2">
+                                    <label class="form-label small text-muted d-lg-none mb-1">Birdies/Round</label>
                                     <input type="number" class="form-control" readonly
                                            value="@bench.Birdies.ToString("F2")" />
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-6 col-lg-2">
+                                    <label class="form-label small text-muted d-lg-none mb-1">Bogeys/Round</label>
                                     <input type="number" class="form-control" readonly
                                            value="@bench.Bogeys.ToString("F2")" />
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-10 col-lg-3">
+                                    <label class="form-label small text-muted d-lg-none mb-1">Cut Probability</label>
                                     <div class="d-flex align-items-center">
                                         <input type="range" class="form-range me-2" min="0" max="100" 
                                                @bind="bench.CutProbabilityPercent" @bind:event="oninput" />
                                         <span class="text-nowrap">@bench.CutProbabilityPercent%</span>
                                     </div>
                                 </div>
-                                <div class="col-md-1">
-                                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                                <div class="col-2 col-lg-1 text-end">
+                                    <button type="button" class="btn btn-outline-danger btn-sm" title="Remove bench player" aria-label="Remove bench player"
                                             @onclick="() => RemoveBenchPlayer(index)">×</button>
                                 </div>
                             </div>
@@ -162,7 +171,7 @@
 
                         <div class="row">
                             <div class="col-md-12">
-                                <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                <button type="submit" class="btn btn-primary btn-lg w-100 mt-3" disabled="@isLoading">
                                     @if (isLoading)
                                     {
                                         <span class="spinner-border spinner-border-sm" role="status"></span>
@@ -181,10 +190,10 @@
         </div>
     </div>
 
-    <div class="col-md-4">
+    <div class="col-12 col-xl-4">
         @if (simulationResult != null)
         {
-            <div class="card">
+            <div class="card sticky-xl-top" style="top: 4.5rem;">
                 <div class="card-header">
                     <h4>Simulation Results</h4>
                 </div>

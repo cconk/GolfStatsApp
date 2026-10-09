@@ -2,14 +2,21 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
 }
 
 .main {
     flex: 1;
+    min-width: 0;
+    background-color: var(--app-bg);
 }
 
 .sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    background-image: linear-gradient(180deg, #0b5d3b 0%, #063b26 75%);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .top-row {
@@ -57,14 +64,15 @@
         top: 0;
     }
 
+    .sidebar {
+        box-shadow: none;
+    }
+
     .top-row {
         position: sticky;
         top: 0;
-        z-index: 1;
-    }
-
-    .main > div {
-        padding-left: 2rem !important;
-        padding-right: 1.5rem !important;
+        z-index: 5;
+        background-color: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(6px);
     }
 }

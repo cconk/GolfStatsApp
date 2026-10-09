@@ -1,0 +1,551 @@
+{
+  "settings": {
+    "components": {
+      "code": true,
+      "binaries": false
+    },
+    "targetId": "net10.0",
+    "targetDisplayName": ".NETCoreApp,Version=v10.0"
+  },
+  "analysisStartTime": "2026-10-08T13:34:04.2299728Z",
+  "analysisEndTime": "2026-10-08T13:34:04.9617408Z",
+  "privacyModeHelpUrl": "https://go.microsoft.com/fwlink/?linkid=2270980",
+  "stats": {
+    "summary": {
+      "projects": 3,
+      "issues": 3,
+      "incidents": 15,
+      "effort": 15
+    },
+    "charts": {
+      "severity": {
+        "Mandatory": 3,
+        "Optional": 0,
+        "Potential": 12,
+        "Information": 0
+      },
+      "category": {
+        "Project": 3,
+        "NuGet": 6,
+        "Api": 6
+      }
+    }
+  },
+  "projects": [
+    {
+      "path": "Client\\GolfStatsApp.Client.csproj",
+      "startingProject": true,
+      "issues": 3,
+      "storyPoints": 10,
+      "properties": {
+        "appName": "GolfStatsApp.Client",
+        "projectKind": "AspNetCore",
+        "frameworks": [
+          "net8.0"
+        ],
+        "languages": [
+          "C#"
+        ],
+        "tools": [
+          "MSBuild"
+        ],
+        "isSdkStyle": true,
+        "isTestProject": false,
+        "numberOfFiles": 23,
+        "numberOfCodeFiles": 1,
+        "linesTotal": 2537,
+        "linesOfCode": 12,
+        "totalApiScanned": 1930,
+        "minLinesOfCodeToChange": 5,
+        "maxLinesOfCodeToChange": 5
+      },
+      "ruleInstances": [
+        {
+          "incidentId": "7002d177-3128-49b6-b924-eb60b2631924",
+          "ruleId": "NuGet.0002",
+          "projectPath": "Client\\GolfStatsApp.Client.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Microsoft.AspNetCore.Components.WebAssembly, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.AspNetCore.Components.WebAssembly, and replace with new package Microsoft.AspNetCore.Components.WebAssembly 10.0.12",
+              "protected": "Microsoft.AspNetCore.Components.WebAssembly, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.AspNetCore.Components.WebAssembly, and replace with new package Microsoft.AspNetCore.Components.WebAssembly 10.0.12"
+            },
+            "kind": "File",
+            "path": "Client\\GolfStatsApp.Client.csproj",
+            "snippet": "Microsoft.AspNetCore.Components.WebAssembly, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.AspNetCore.Components.WebAssembly, and replace with new package Microsoft.AspNetCore.Components.WebAssembly 10.0.12",
+            "protectedSnippet": "Microsoft.AspNetCore.Components.WebAssembly, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.AspNetCore.Components.WebAssembly, and replace with new package Microsoft.AspNetCore.Components.WebAssembly 10.0.12",
+            "label": "Microsoft.AspNetCore.Components.WebAssembly 8.0.8",
+            "properties": {
+              "PackageId": "Microsoft.AspNetCore.Components.WebAssembly",
+              "PackageVersion": "8.0.8",
+              "PackageNewVersion": "10.0.12",
+              "PackageReplacements": null
+            }
+          }
+        },
+        {
+          "incidentId": "4355a31c-4f3f-48f5-a6e5-c8c28a42a501",
+          "ruleId": "NuGet.0002",
+          "projectPath": "Client\\GolfStatsApp.Client.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Microsoft.AspNetCore.Components.WebAssembly.DevServer, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.AspNetCore.Components.WebAssembly.DevServer, and replace with new package Microsoft.AspNetCore.Components.WebAssembly.DevServer 10.0.12",
+              "protected": "Microsoft.AspNetCore.Components.WebAssembly.DevServer, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.AspNetCore.Components.WebAssembly.DevServer, and replace with new package Microsoft.AspNetCore.Components.WebAssembly.DevServer 10.0.12"
+            },
+            "kind": "File",
+            "path": "Client\\GolfStatsApp.Client.csproj",
+            "snippet": "Microsoft.AspNetCore.Components.WebAssembly.DevServer, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.AspNetCore.Components.WebAssembly.DevServer, and replace with new package Microsoft.AspNetCore.Components.WebAssembly.DevServer 10.0.12",
+            "protectedSnippet": "Microsoft.AspNetCore.Components.WebAssembly.DevServer, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.AspNetCore.Components.WebAssembly.DevServer, and replace with new package Microsoft.AspNetCore.Components.WebAssembly.DevServer 10.0.12",
+            "label": "Microsoft.AspNetCore.Components.WebAssembly.DevServer 8.0.8",
+            "properties": {
+              "PackageId": "Microsoft.AspNetCore.Components.WebAssembly.DevServer",
+              "PackageVersion": "8.0.8",
+              "PackageNewVersion": "10.0.12",
+              "PackageReplacements": null
+            }
+          }
+        },
+        {
+          "incidentId": "a0ef80c5-83a8-49fc-9ed2-9e31517242b5",
+          "ruleId": "NuGet.0002",
+          "projectPath": "Client\\GolfStatsApp.Client.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Microsoft.NET.ILLink.Tasks, 8.0.31\n\nRecommendation:\n\nRemove Microsoft.NET.ILLink.Tasks, and replace with new package Microsoft.NET.ILLink.Tasks 10.0.12",
+              "protected": "Microsoft.NET.ILLink.Tasks, 8.0.31\n\nRecommendation:\n\nRemove Microsoft.NET.ILLink.Tasks, and replace with new package Microsoft.NET.ILLink.Tasks 10.0.12"
+            },
+            "kind": "File",
+            "path": "Client\\GolfStatsApp.Client.csproj",
+            "snippet": "Microsoft.NET.ILLink.Tasks, 8.0.31\n\nRecommendation:\n\nRemove Microsoft.NET.ILLink.Tasks, and replace with new package Microsoft.NET.ILLink.Tasks 10.0.12",
+            "protectedSnippet": "Microsoft.NET.ILLink.Tasks, 8.0.31\n\nRecommendation:\n\nRemove Microsoft.NET.ILLink.Tasks, and replace with new package Microsoft.NET.ILLink.Tasks 10.0.12",
+            "label": "Microsoft.NET.ILLink.Tasks 8.0.31",
+            "properties": {
+              "PackageId": "Microsoft.NET.ILLink.Tasks",
+              "PackageVersion": "8.0.31",
+              "PackageNewVersion": "10.0.12",
+              "PackageReplacements": null
+            }
+          }
+        },
+        {
+          "incidentId": "b9362981-a1b6-4229-a16d-976a75aab2f9",
+          "ruleId": "NuGet.0002",
+          "projectPath": "Client\\GolfStatsApp.Client.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "System.Net.Http.Json, 8.0.0\n\nRecommendation:\n\nRemove System.Net.Http.Json, and replace with new package System.Net.Http.Json 10.0.12",
+              "protected": "System.Net.Http.Json, 8.0.0\n\nRecommendation:\n\nRemove System.Net.Http.Json, and replace with new package System.Net.Http.Json 10.0.12"
+            },
+            "kind": "File",
+            "path": "Client\\GolfStatsApp.Client.csproj",
+            "snippet": "System.Net.Http.Json, 8.0.0\n\nRecommendation:\n\nRemove System.Net.Http.Json, and replace with new package System.Net.Http.Json 10.0.12",
+            "protectedSnippet": "System.Net.Http.Json, 8.0.0\n\nRecommendation:\n\nRemove System.Net.Http.Json, and replace with new package System.Net.Http.Json 10.0.12",
+            "label": "System.Net.Http.Json 8.0.0",
+            "properties": {
+              "PackageId": "System.Net.Http.Json",
+              "PackageVersion": "8.0.0",
+              "PackageNewVersion": "10.0.12",
+              "PackageReplacements": null
+            }
+          }
+        },
+        {
+          "incidentId": "29702f88-90e5-4d7c-b620-78c399d879df",
+          "ruleId": "Project.0002",
+          "projectPath": "Client\\GolfStatsApp.Client.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Current target framework: net8.0\nRecommended target framework: net10.0",
+              "protected": "Current target framework: net8.0\nRecommended target framework: net10.0"
+            },
+            "kind": "File",
+            "path": "Client\\GolfStatsApp.Client.csproj",
+            "snippet": "Current target framework: net8.0\nRecommended target framework: net10.0",
+            "protectedSnippet": "Current target framework: net8.0\nRecommended target framework: net10.0",
+            "properties": {
+              "CurrentTargetFramework": "net8.0",
+              "RecommendedTargetFramework": "net10.0"
+            }
+          }
+        },
+        {
+          "incidentId": "ee51212f-83d0-4a87-b30e-c809f83fa23d",
+          "ruleId": "Api.0003",
+          "description": "Breaking change - Streaming HTTP responses enabled by default in browser HTTP clients ",
+          "projectPath": "Client\\GolfStatsApp.Client.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var errorContent = await response.Content.ReadAsStringAsync();",
+              "protected": "T:System.Net.Http.HttpContent"
+            },
+            "kind": "File",
+            "path": "Client\\obj\\Debug\\net8.0\\Microsoft.CodeAnalysis.Razor.Compiler\\Microsoft.NET.Sdk.Razor.SourceGenerators.RazorSourceGenerator\\Pages/FantasyGolf_razor.g.cs",
+            "snippet": "var errorContent = await response.Content.ReadAsStringAsync();",
+            "protectedSnippet": "T:System.Net.Http.HttpContent",
+            "label": "T:System.Net.Http.HttpContent",
+            "properties": {
+              "CharCount": "51909"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/default-http-streaming.md",
+                "isCustom": false
+              }
+            ],
+            "line": 1264,
+            "column": 16
+          }
+        },
+        {
+          "incidentId": "ec49be6c-eead-46cb-a378-4170517110f6",
+          "ruleId": "Api.0003",
+          "description": "Breaking change - Streaming HTTP responses enabled by default in browser HTTP clients ",
+          "projectPath": "Client\\GolfStatsApp.Client.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "simulationResult = await response.Content.ReadFromJsonAsync\u003CSimulationResult\u003E();",
+              "protected": "T:System.Net.Http.HttpContent"
+            },
+            "kind": "File",
+            "path": "Client\\obj\\Debug\\net8.0\\Microsoft.CodeAnalysis.Razor.Compiler\\Microsoft.NET.Sdk.Razor.SourceGenerators.RazorSourceGenerator\\Pages/FantasyGolf_razor.g.cs",
+            "snippet": "simulationResult = await response.Content.ReadFromJsonAsync\u003CSimulationResult\u003E();",
+            "protectedSnippet": "T:System.Net.Http.HttpContent",
+            "label": "T:System.Net.Http.HttpContent",
+            "properties": {
+              "CharCount": "51909"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/default-http-streaming.md",
+                "isCustom": false
+              }
+            ],
+            "line": 1260,
+            "column": 16
+          }
+        },
+        {
+          "incidentId": "bedcd189-abc1-4274-83ef-c4ebe161b0a8",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "Client\\GolfStatsApp.Client.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "builder.Services.AddScoped(sp =\u003E new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });",
+              "protected": "T:System.Uri"
+            },
+            "kind": "File",
+            "path": "Client\\Program.cs",
+            "snippet": "builder.Services.AddScoped(sp =\u003E new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });",
+            "protectedSnippet": "T:System.Uri",
+            "label": "T:System.Uri",
+            "properties": {
+              "CharCount": "432"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 9,
+            "column": 0
+          }
+        },
+        {
+          "incidentId": "ea2cde8d-855e-40f0-b75e-f47a3183c93c",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "Client\\GolfStatsApp.Client.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "builder.Services.AddScoped(sp =\u003E new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });",
+              "protected": "M:System.Uri.#ctor(System.String)"
+            },
+            "kind": "File",
+            "path": "Client\\Program.cs",
+            "snippet": "builder.Services.AddScoped(sp =\u003E new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });",
+            "protectedSnippet": "M:System.Uri.#ctor(System.String)",
+            "label": "M:System.Uri.#ctor(System.String)",
+            "properties": {
+              "CharCount": "432"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 9,
+            "column": 0
+          }
+        },
+        {
+          "incidentId": "dc966995-c705-4f1e-be2c-715981d3a44d",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "Client\\GolfStatsApp.Client.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "builder.Services.AddScoped(sp =\u003E new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });",
+              "protected": "T:System.Uri"
+            },
+            "kind": "File",
+            "path": "Client\\Program.cs",
+            "snippet": "builder.Services.AddScoped(sp =\u003E new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });",
+            "protectedSnippet": "T:System.Uri",
+            "label": "T:System.Uri",
+            "properties": {
+              "CharCount": "432"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 9,
+            "column": 0
+          }
+        }
+      ],
+      "features": []
+    },
+    {
+      "path": "Server\\GolfStatsApp.Server.csproj",
+      "startingProject": true,
+      "issues": 3,
+      "storyPoints": 4,
+      "properties": {
+        "appName": "GolfStatsApp.Server",
+        "projectKind": "AspNetCore",
+        "frameworks": [
+          "net8.0"
+        ],
+        "languages": [
+          "C#"
+        ],
+        "tools": [
+          "MSBuild"
+        ],
+        "isSdkStyle": true,
+        "isTestProject": false,
+        "numberOfFiles": 10,
+        "numberOfCodeFiles": 7,
+        "linesTotal": 995,
+        "linesOfCode": 799,
+        "totalApiScanned": 1033,
+        "minLinesOfCodeToChange": 1,
+        "maxLinesOfCodeToChange": 1
+      },
+      "ruleInstances": [
+        {
+          "incidentId": "0af53389-5568-4e70-b0c5-d44e81feb2d6",
+          "ruleId": "NuGet.0002",
+          "projectPath": "Server\\GolfStatsApp.Server.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Microsoft.AspNetCore.Components.WebAssembly.Server, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.AspNetCore.Components.WebAssembly.Server, and replace with new package Microsoft.AspNetCore.Components.WebAssembly.Server 10.0.12",
+              "protected": "Microsoft.AspNetCore.Components.WebAssembly.Server, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.AspNetCore.Components.WebAssembly.Server, and replace with new package Microsoft.AspNetCore.Components.WebAssembly.Server 10.0.12"
+            },
+            "kind": "File",
+            "path": "Server\\GolfStatsApp.Server.csproj",
+            "snippet": "Microsoft.AspNetCore.Components.WebAssembly.Server, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.AspNetCore.Components.WebAssembly.Server, and replace with new package Microsoft.AspNetCore.Components.WebAssembly.Server 10.0.12",
+            "protectedSnippet": "Microsoft.AspNetCore.Components.WebAssembly.Server, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.AspNetCore.Components.WebAssembly.Server, and replace with new package Microsoft.AspNetCore.Components.WebAssembly.Server 10.0.12",
+            "label": "Microsoft.AspNetCore.Components.WebAssembly.Server 8.0.8",
+            "properties": {
+              "PackageId": "Microsoft.AspNetCore.Components.WebAssembly.Server",
+              "PackageVersion": "8.0.8",
+              "PackageNewVersion": "10.0.12",
+              "PackageReplacements": null
+            }
+          }
+        },
+        {
+          "incidentId": "71b7ec9e-dc46-44ba-a69d-5fe50bf60641",
+          "ruleId": "NuGet.0002",
+          "projectPath": "Server\\GolfStatsApp.Server.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Microsoft.EntityFrameworkCore.Tools, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.EntityFrameworkCore.Tools, and replace with new package Microsoft.EntityFrameworkCore.Tools 10.0.12",
+              "protected": "Microsoft.EntityFrameworkCore.Tools, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.EntityFrameworkCore.Tools, and replace with new package Microsoft.EntityFrameworkCore.Tools 10.0.12"
+            },
+            "kind": "File",
+            "path": "Server\\GolfStatsApp.Server.csproj",
+            "snippet": "Microsoft.EntityFrameworkCore.Tools, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.EntityFrameworkCore.Tools, and replace with new package Microsoft.EntityFrameworkCore.Tools 10.0.12",
+            "protectedSnippet": "Microsoft.EntityFrameworkCore.Tools, 8.0.8\n\nRecommendation:\n\nRemove Microsoft.EntityFrameworkCore.Tools, and replace with new package Microsoft.EntityFrameworkCore.Tools 10.0.12",
+            "label": "Microsoft.EntityFrameworkCore.Tools 8.0.8",
+            "properties": {
+              "PackageId": "Microsoft.EntityFrameworkCore.Tools",
+              "PackageVersion": "8.0.8",
+              "PackageNewVersion": "10.0.12",
+              "PackageReplacements": null
+            }
+          }
+        },
+        {
+          "incidentId": "2fda702e-5a1a-457b-aca0-0646fda0263a",
+          "ruleId": "Project.0002",
+          "projectPath": "Server\\GolfStatsApp.Server.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Current target framework: net8.0\nRecommended target framework: net10.0",
+              "protected": "Current target framework: net8.0\nRecommended target framework: net10.0"
+            },
+            "kind": "File",
+            "path": "Server\\GolfStatsApp.Server.csproj",
+            "snippet": "Current target framework: net8.0\nRecommended target framework: net10.0",
+            "protectedSnippet": "Current target framework: net8.0\nRecommended target framework: net10.0",
+            "properties": {
+              "CurrentTargetFramework": "net8.0",
+              "RecommendedTargetFramework": "net10.0"
+            }
+          }
+        },
+        {
+          "incidentId": "ee3c82da-4af5-4239-9058-1f160f56c041",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: Exception diagnostics are suppressed when IExceptionHandler.TryHandleAsync returns true ",
+          "projectPath": "Server\\GolfStatsApp.Server.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "app.UseExceptionHandler(\u0022/Error\u0022);",
+              "protected": "M:Microsoft.AspNetCore.Builder.ExceptionHandlerExtensions.UseExceptionHandler(Microsoft.AspNetCore.Builder.IApplicationBuilder,System.String)"
+            },
+            "kind": "File",
+            "path": "Server\\Program.cs",
+            "snippet": "app.UseExceptionHandler(\u0022/Error\u0022);",
+            "protectedSnippet": "M:Microsoft.AspNetCore.Builder.ExceptionHandlerExtensions.UseExceptionHandler(Microsoft.AspNetCore.Builder.IApplicationBuilder,System.String)",
+            "label": "M:Microsoft.AspNetCore.Builder.ExceptionHandlerExtensions.UseExceptionHandler(Microsoft.AspNetCore.Builder.IApplicationBuilder,System.String)",
+            "properties": {
+              "CharCount": "1101"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/aspnet-core/10/exception-handler-diagnostics-suppressed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 25,
+            "column": 4
+          }
+        }
+      ],
+      "features": []
+    },
+    {
+      "path": "Shared\\GolfStatsApp.Shared.csproj",
+      "startingProject": true,
+      "issues": 1,
+      "storyPoints": 1,
+      "properties": {
+        "appName": "GolfStatsApp.Shared",
+        "projectKind": "ClassLibrary",
+        "frameworks": [
+          "net8.0"
+        ],
+        "languages": [
+          "C#"
+        ],
+        "tools": [
+          "MSBuild"
+        ],
+        "isSdkStyle": true,
+        "isTestProject": false,
+        "numberOfFiles": 3,
+        "numberOfCodeFiles": 3,
+        "linesTotal": 92,
+        "linesOfCode": 92,
+        "totalApiScanned": 170,
+        "minLinesOfCodeToChange": 0,
+        "maxLinesOfCodeToChange": 0
+      },
+      "ruleInstances": [
+        {
+          "incidentId": "f715770f-dab6-400a-b04c-3bed5d53e3df",
+          "ruleId": "Project.0002",
+          "projectPath": "Shared\\GolfStatsApp.Shared.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Current target framework: net8.0\nRecommended target framework: net10.0",
+              "protected": "Current target framework: net8.0\nRecommended target framework: net10.0"
+            },
+            "kind": "File",
+            "path": "Shared\\GolfStatsApp.Shared.csproj",
+            "snippet": "Current target framework: net8.0\nRecommended target framework: net10.0",
+            "protectedSnippet": "Current target framework: net8.0\nRecommended target framework: net10.0",
+            "properties": {
+              "CurrentTargetFramework": "net8.0",
+              "RecommendedTargetFramework": "net10.0"
+            }
+          }
+        }
+      ],
+      "features": []
+    }
+  ],
+  "rules": {
+    "Project.0002": {
+      "id": "Project.0002",
+      "isFeature": false,
+      "description": "Project\u0027s target framework(s) needs to be changed to the new target framework that you selected for this upgrade.\n\nDuring upgrade target framework will be adjusted to corresponding platform when applicable. In some cases project would result in multiple target frameworks after the upgrade if it was using features that now have their own platforms in modern .NET frameworks (windows, iOS, Android etc).",
+      "label": "Project\u0027s target framework(s) needs to be changed",
+      "severity": "Mandatory",
+      "effort": 1,
+      "links": [
+        {
+          "title": "Overview of porting from .NET Framework to .NET",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2265227",
+          "isCustom": false
+        },
+        {
+          "title": ".NET project SDKs",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2265226",
+          "isCustom": false
+        }
+      ]
+    },
+    "NuGet.0002": {
+      "id": "NuGet.0002",
+      "isFeature": false,
+      "description": "NuGet package upgrade is recommended for selected target framework.\n\nStandard .NET packages are recommended to have versions matching version of .NET that project targets.\n\nSome other packages also are known to work better for selected target frameworks.",
+      "label": "NuGet package upgrade is recommended",
+      "severity": "Potential",
+      "effort": 1,
+      "links": [
+        {
+          "url": "https://go.microsoft.com/fwlink/?linkid=2262530",
+          "isCustom": false
+        }
+      ]
+    },
+    "Api.0003": {
+      "id": "Api.0003",
+      "isFeature": false,
+      "description": "API has a behavioral change in selected .NET version: code and binaries may behave differently at runtime without needing recompilation, but the new behavior might be undesirable and require updates.",
+      "label": "Behavioral change in selected .NET version",
+      "severity": "Potential",
+      "effort": 1
+    }
+  }
+}
