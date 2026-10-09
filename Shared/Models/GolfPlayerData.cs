@@ -4,6 +4,7 @@ namespace GolfStatsApp.Shared.Models
 {
     public class GolfPlayerData
     {
+        public string PlayerId { get; set; } = string.Empty;
         public string PlayerName { get; set; } = string.Empty;
         public double Birdies { get; set; }
         public double Bogeys { get; set; }

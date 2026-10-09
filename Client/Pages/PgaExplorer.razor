@@ -1,0 +1,341 @@
+﻿@page "/pga-explorer"
+@using System.Text.Json
+@using GolfStatsApp.Shared.Models
+@inject HttpClient Http
+
+<PageTitle>PGA Data Explorer</PageTitle>
+
+<h3>PGA Data Explorer</h3>
+<p class="text-muted">Browse live feeds from the PGA Tour API via the server's native C# client.</p>
+
+<div class="d-flex flex-nowrap align-items-end gap-2 mb-3 overflow-auto">
+	<div style="min-width: 220px;">
+		<label class="form-label mb-1">Feed</label>
+		<select class="form-select" @bind="selectedFeed">
+			@foreach (var feed in feeds)
+			{
+				<option value="@feed.Key">@feed.Value.Label</option>
+			}
+		</select>
+	</div>
+	@if (CurrentFeed.NeedsTournament)
+	{
+		<div style="min-width: 220px;">
+			<label class="form-label mb-1 text-truncate d-block" style="max-width: 260px;" title="@TournamentName(tournamentId)">
+				Tournament @(string.IsNullOrEmpty(TournamentName(tournamentId)) ? "ID" : $"– {TournamentName(tournamentId)}")
+			</label>
+			<div class="input-group">
+				<input class="form-control" @bind="tournamentId" />
+				<button class="btn btn-outline-secondary" title="Use current tournament" @onclick="LoadCurrentTournament">Current</button>
+			</div>
+		</div>
+	}
+	@if (CurrentFeed.NeedsPlayer)
+	{
+		<div style="min-width: 180px;">
+			<label class="form-label mb-1 text-truncate d-block" style="max-width: 220px;" title="@PlayerName(playerId)">
+				Player @(string.IsNullOrEmpty(PlayerName(playerId)) ? "ID" : $"– {PlayerName(playerId)}")
+			</label>
+			<input class="form-control" @bind="PlayerInput" list="pga-players" placeholder="ID or name" />
+			<datalist id="pga-players">
+				@foreach (var p in playerNames.OrderBy(p => p.Value))
+				{
+					<option value="@p.Key">@p.Value</option>
+				}
+			</datalist>
+		</div>
+	}
+	@if (CurrentFeed.NeedsStat)
+	{
+		<div style="width: 120px;">
+			<label class="form-label mb-1">Stat ID</label>
+			<input class="form-control" @bind="statId" placeholder="e.g. 02675" />
+		</div>
+	}
+	@if (CurrentFeed.NeedsYear)
+	{
+		<div style="width: 100px;">
+			<label class="form-label mb-1">Year</label>
+			<input class="form-control" type="number" @bind="year" />
+		</div>
+	}
+	<div>
+		<button class="btn btn-primary" @onclick="LoadFeed" disabled="@loading">
+			@(loading ? "Loading..." : "Load")
+		</button>
+	</div>
+</div>
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+@if (rows.Count > 0)
+{
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <small class="text-muted">@lastUrl &mdash; @FilteredRows.Count() of @rows.Count rows, @columns.Count columns</small>
+        <input class="form-control form-control-sm w-25" placeholder="Filter rows..." @bind="filter" @bind:event="oninput" />
+    </div>
+    <div class="table-responsive" style="max-height: 65vh; overflow: auto;">
+        <table class="table table-sm table-striped table-hover">
+            <thead class="table-light" style="position: sticky; top: 0;">
+                <tr>
+                    @foreach (var col in columns)
+                    {
+                        <th style="cursor: pointer; white-space: nowrap;" @onclick="() => SortBy(col)">
+                            @col @(sortColumn == col ? (sortAscending ? "▲" : "▼") : "")
+                        </th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in SortedRows.Take(500))
+                {
+                    <tr>
+                        @foreach (var col in columns)
+                        {
+                            <td style="white-space: nowrap;">@(row.TryGetValue(col, out var v) ? v : "")</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else if (rawJson != null)
+{
+    <pre class="bg-light p-2" style="max-height: 65vh; overflow: auto;">@rawJson</pre>
+}
+
+@code {
+    private record Feed(string Label, Func<PgaExplorer, string> Url, bool NeedsTournament = false, bool NeedsPlayer = false, bool NeedsStat = false, bool NeedsYear = false);
+
+    private readonly Dictionary<string, Feed> feeds = new()
+    {
+        ["sim"] = new("Simulation Inputs (Birdies/Bogeys)", p => "api/PlayerData/players"),
+        ["leaderboard"] = new("Leaderboard", p => $"api/PgaTour/tournaments/{p.tournamentId}/leaderboard", NeedsTournament: true),
+        ["field"] = new("Tournament Field", p => $"api/PgaTour/tournaments/{p.tournamentId}/field", NeedsTournament: true),
+        ["odds"] = new("Odds", p => $"api/PgaTour/tournaments/{p.tournamentId}/odds", NeedsTournament: true),
+        ["coursestats"] = new("Course Stats", p => $"api/PgaTour/tournaments/{p.tournamentId}/course-stats", NeedsTournament: true),
+        ["scorecard"] = new("Scorecard", p => $"api/PgaTour/tournaments/{p.tournamentId}/players/{p.playerId}/scorecard", NeedsTournament: true, NeedsPlayer: true),
+        ["stat"] = new("Stat Rankings", p => $"api/PgaTour/stats/{p.statId}?year={p.year}", NeedsStat: true, NeedsYear: true),
+        ["catalog"] = new("Stat Catalog (IDs)", p => "api/PgaTour/stats/catalog"),
+        ["schedule"] = new("Schedule", p => $"api/PgaTour/schedule/{p.year}", NeedsYear: true),
+        ["fedex"] = new("FedExCup Standings", p => $"api/PgaTour/fedex-cup?year={p.year}", NeedsYear: true),
+        ["players"] = new("Player Directory", p => "api/PgaTour/players"),
+        ["profile"] = new("Player Profile", p => $"api/PgaTour/players/{p.playerId}/profile", NeedsPlayer: true),
+        ["results"] = new("Player Results", p => $"api/PgaTour/players/{p.playerId}/results?season={p.year}", NeedsPlayer: true, NeedsYear: true),
+        ["pstats"] = new("Player Stats", p => $"api/PgaTour/players/{p.playerId}/stats", NeedsPlayer: true),
+    };
+
+    private string selectedFeed = "sim";
+    private string tournamentId = string.Empty;
+    private string playerId = "34046";
+    private string statId = "02675";
+    private int year = DateTime.Now.Year;
+
+    private bool loading;
+    private string? error;
+    private string? rawJson;
+    private string? lastUrl;
+    private string filter = string.Empty;
+    private string? sortColumn;
+    private bool sortAscending = true;
+    private List<string> columns = new();
+    private List<Dictionary<string, string>> rows = new();
+
+    private Feed CurrentFeed => feeds[selectedFeed];
+
+    private Dictionary<string, string> playerNames = new();
+    private readonly Dictionary<int, Dictionary<string, string>> tournamentNamesByYear = new();
+
+    private string PlayerInput
+    {
+        get => playerId;
+        set
+        {
+            var match = playerNames.FirstOrDefault(p => string.Equals(p.Value, value?.Trim(), StringComparison.OrdinalIgnoreCase));
+            playerId = match.Key ?? value?.Trim() ?? string.Empty;
+        }
+    }
+
+    private string PlayerName(string? id) =>
+        id != null && playerNames.TryGetValue(id, out var n) ? n : string.Empty;
+
+    private string TournamentName(string? id)
+    {
+        if (string.IsNullOrEmpty(id)) return string.Empty;
+        foreach (var map in tournamentNamesByYear.Values)
+            if (map.TryGetValue(id, out var n)) return n;
+        return string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(LoadPlayerNames(), LoadTournamentNames(year));
+        await LoadFeed();
+    }
+
+    private async Task LoadPlayerNames()
+    {
+        try
+        {
+            var list = await Http.GetFromJsonAsync<JsonElement>("api/PgaTour/players");
+            playerNames = list.EnumerateArray()
+                .Select(p => (Id: Str(p, "playerId"), Name: Str(p, "displayName")))
+                .Where(p => !string.IsNullOrEmpty(p.Id) && !string.IsNullOrEmpty(p.Name))
+                .GroupBy(p => p.Id)
+                .ToDictionary(g => g.Key, g => g.First().Name);
+        }
+        catch { }
+    }
+
+    private async Task LoadTournamentNames(int forYear)
+    {
+        if (tournamentNamesByYear.ContainsKey(forYear)) return;
+        try
+        {
+            var list = await Http.GetFromJsonAsync<JsonElement>($"api/PgaTour/schedule/{forYear}");
+            tournamentNamesByYear[forYear] = list.EnumerateArray()
+                .Select(t => (Id: Str(t, "tournamentId"), Name: Str(t, "tournamentName")))
+                .Where(t => !string.IsNullOrEmpty(t.Id) && !string.IsNullOrEmpty(t.Name))
+                .GroupBy(t => t.Id)
+                .ToDictionary(g => g.Key, g => g.First().Name);
+        }
+        catch { }
+    }
+
+    private static string Str(JsonElement e, string name) =>
+        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+
+    private void AddNameColumns()
+    {
+        AddNameColumn("playerId", "playerName", PlayerName, "displayName");
+        AddNameColumn("tournamentId", "tournamentName", TournamentName, "tournament");
+    }
+
+    private void AddNameColumn(string idCol, string nameCol, Func<string, string> lookup, string altNameCol)
+    {
+        var idIndex = columns.IndexOf(idCol);
+        if (idIndex < 0 || columns.Contains(nameCol) || columns.Contains(altNameCol)) return;
+        var any = false;
+        foreach (var row in rows)
+        {
+            var name = row.TryGetValue(idCol, out var id) ? lookup(id) : string.Empty;
+            row[nameCol] = name;
+            any |= name.Length > 0;
+        }
+        if (any) columns.Insert(idIndex + 1, nameCol);
+    }
+
+    private IEnumerable<Dictionary<string, string>> FilteredRows => string.IsNullOrWhiteSpace(filter)
+        ? rows
+        : rows.Where(r => r.Values.Any(v => v.Contains(filter, StringComparison.OrdinalIgnoreCase)));
+
+    private IEnumerable<Dictionary<string, string>> SortedRows
+    {
+        get
+        {
+            if (sortColumn == null) return FilteredRows;
+            Func<Dictionary<string, string>, string> key = r => r.TryGetValue(sortColumn, out var v) ? v : "";
+            bool numeric = FilteredRows.All(r => string.IsNullOrEmpty(key(r)) || double.TryParse(key(r), out _));
+            if (numeric)
+            {
+                Func<Dictionary<string, string>, double> nkey = r => double.TryParse(key(r), out var d) ? d : double.MinValue;
+                return sortAscending ? FilteredRows.OrderBy(nkey) : FilteredRows.OrderByDescending(nkey);
+            }
+            return sortAscending ? FilteredRows.OrderBy(key) : FilteredRows.OrderByDescending(key);
+        }
+    }
+
+    private void SortBy(string col)
+    {
+        sortAscending = sortColumn == col ? !sortAscending : true;
+        sortColumn = col;
+    }
+
+    private async Task LoadCurrentTournament()
+    {
+        try
+        {
+            var result = await Http.GetFromJsonAsync<JsonElement>("api/PgaTour/tournaments/current");
+            tournamentId = result.TryGetProperty("tournamentId", out var id) ? id.ToString() : string.Empty;
+        }
+        catch (Exception ex)
+        {
+            error = $"Could not get current tournament: {ex.Message}";
+        }
+    }
+
+    private async Task LoadFeed()
+    {
+        error = null;
+        rawJson = null;
+        rows = new();
+        columns = new();
+        sortColumn = null;
+        loading = true;
+
+        try
+        {
+            if (CurrentFeed.NeedsTournament && string.IsNullOrWhiteSpace(tournamentId))
+            {
+                await LoadCurrentTournament();
+            }
+
+            if (CurrentFeed.NeedsTournament || selectedFeed == "results")
+            {
+                await LoadTournamentNames(year);
+            }
+
+            lastUrl = CurrentFeed.Url(this);
+            var response = await Http.GetAsync(lastUrl);
+            var body = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                error = $"{(int)response.StatusCode} {response.ReasonPhrase}: {body}";
+                return;
+            }
+
+            using var doc = JsonDocument.Parse(body);
+            var root = doc.RootElement;
+            if (root.ValueKind == JsonValueKind.Array && root.EnumerateArray().All(e => e.ValueKind == JsonValueKind.Object))
+            {
+                foreach (var item in root.EnumerateArray())
+                {
+                    var row = new Dictionary<string, string>();
+                    var props = item.EnumerateObject().SelectMany(p =>
+                        p.Name == "values" && p.Value.ValueKind == JsonValueKind.Object ? p.Value.EnumerateObject() : new[] { p }.AsEnumerable());
+                    foreach (var prop in props)
+                    {
+                        if (!columns.Contains(prop.Name)) columns.Add(prop.Name);
+                        row[prop.Name] = prop.Value.ValueKind switch
+                        {
+                            JsonValueKind.String => prop.Value.GetString() ?? "",
+                            JsonValueKind.Null => "",
+                            JsonValueKind.Object or JsonValueKind.Array => Truncate(prop.Value.GetRawText()),
+                            _ => prop.Value.GetRawText()
+                        };
+                    }
+                    rows.Add(row);
+                }
+                AddNameColumns();
+            }
+            else
+            {
+                rawJson = JsonSerializer.Serialize(root, new JsonSerializerOptions { WriteIndented = true });
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private static string Truncate(string s) => s.Length > 80 ? s[..80] + "…" : s;
+}

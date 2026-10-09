@@ -12,11 +12,18 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="8.10.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Client\GolfStatsApp.Client.csproj" />
     <ProjectReference Include="..\Shared\GolfStatsApp.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="PgaTour\Queries\*.graphql" />
+    <EmbeddedResource Include="PgaTour\stat_ids.json" />
+    <Content Remove="PgaTour\stat_ids.json" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,11 +1,11 @@
 ﻿<div class="top-row pl-4 navbar navbar-dark">
-    <a class="navbar-brand" href="">GolfStatsApp</a>
-    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+    <a class="navbar-brand" href="">⛳ GolfStatsApp</a>
+    <button class="navbar-toggler" type="button" title="Toggle navigation" aria-label="Toggle navigation" aria-expanded="@(!collapseNavMenu)" @onclick="ToggleNavMenu">
         <span class="navbar-toggler-icon"></span>
     </button>
 </div>
 
-<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+<div class="nav-scrollable @NavMenuCssClass" @onclick="CollapseNavMenu">
     <ul class="nav flex-column">
         <li class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
@@ -22,6 +22,11 @@
                 <span class="oi oi-target" aria-hidden="true"></span> Fantasy Golf
             </NavLink>
         </li>
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="pga-explorer">
+                <span class="oi oi-bar-chart" aria-hidden="true"></span> PGA Data Explorer
+            </NavLink>
+        </li>
     </ul>
 </div>
 
@@ -33,5 +38,10 @@
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void CollapseNavMenu()
+    {
+        collapseNavMenu = true;
     }
 }

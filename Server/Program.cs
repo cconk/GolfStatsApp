@@ -1,17 +1,22 @@
-﻿using Microsoft.AspNetCore;
+﻿using System;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using GolfStatsApp.Server.Services;
+using GolfStatsApp.Server.PgaTour;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<GolfSimulationService>();
 builder.Services.AddScoped<PlayerDataService>();
+builder.Services.AddPgaTourClient(builder.Configuration);
 
 var app = builder.Build();
 

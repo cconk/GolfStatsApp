@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using GolfStatsApp.Shared.Models;
+using GolfStatsApp.Server.PgaTour;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
@@ -14,22 +16,89 @@ namespace GolfStatsApp.Server.Services
     {
         private readonly IWebHostEnvironment _environment;
         private readonly ILogger<PlayerDataService> _logger;
+        private const string BirdieAverageStatId = "156";
+        private const string BogeyAvoidanceStatId = "02414";
+        private const string CacheKey = "pga:simulation-inputs";
+
+        private readonly PgaTourApiClient _pgaTourClient;
+        private readonly IMemoryCache _cache;
         private List<GolfPlayerData>? _players;
 
-        public PlayerDataService(IWebHostEnvironment environment, ILogger<PlayerDataService> logger)
+        public PlayerDataService(IWebHostEnvironment environment, ILogger<PlayerDataService> logger, PgaTourApiClient pgaTourClient, IMemoryCache cache)
         {
             _environment = environment;
             _logger = logger;
+            _pgaTourClient = pgaTourClient;
+            _cache = cache;
         }
 
         public async Task<List<GolfPlayerData>> GetPlayersAsync()
         {
-            if (_players == null)
+            if (_cache.TryGetValue(CacheKey, out List<GolfPlayerData>? cached) && cached != null)
             {
-                await LoadPlayersFromCsv();
+                return cached;
             }
+
+            var live = await LoadPlayersFromPgaTour();
+            if (live.Count > 0)
+            {
+                _cache.Set(CacheKey, live, TimeSpan.FromHours(6));
+                return live;
+            }
+
+            await LoadPlayersFromCsv();
             return _players ?? new List<GolfPlayerData>();
         }
+
+        private async Task<List<GolfPlayerData>> LoadPlayersFromPgaTour()
+        {
+            try
+            {
+                var birdiesTask = _pgaTourClient.GetStatAsync(BirdieAverageStatId);
+                var bogeysTask = _pgaTourClient.GetStatAsync(BogeyAvoidanceStatId);
+                await Task.WhenAll(birdiesTask, bogeysTask);
+
+                var bogeysByPlayer = bogeysTask.Result.Rows
+                    .Where(r => r.PlayerId != null)
+                    .GroupBy(r => r.PlayerId!)
+                    .ToDictionary(g => g.Key, g => BogeysPerRound(g.First()));
+
+                var players = birdiesTask.Result.Rows
+                    .Where(r => r.PlayerId != null && bogeysByPlayer.ContainsKey(r.PlayerId))
+                    .Select(r => new GolfPlayerData
+                    {
+                        PlayerId = r.PlayerId!,
+                        PlayerName = r.PlayerName?.Trim() ?? string.Empty,
+                        Rank = r.Rank ?? 0,
+                        Birdies = StatAverage(r),
+                        Bogeys = bogeysByPlayer[r.PlayerId!]
+                    })
+                    .Where(p => !string.IsNullOrEmpty(p.PlayerName) && p.Birdies > 0 && p.Bogeys > 0)
+                    .OrderBy(p => p.Rank)
+                    .ToList();
+
+                _logger.LogInformation("Loaded {Count} players from PGA Tour API (birdie rows {B}, bogey rows {G})",
+                    players.Count, birdiesTask.Result.Rows.Count, bogeysTask.Result.Rows.Count);
+                return players;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "PGA Tour API unavailable; falling back to CSV");
+                return new List<GolfPlayerData>();
+            }
+        }
+
+        private static double StatAverage(StatRankingRow row) => StatNumber(row, "avg");
+
+        private static double BogeysPerRound(StatRankingRow row)
+        {
+            var holes = StatNumber(row, "holes_played");
+            return holes > 0 ? Math.Round(StatNumber(row, "bogeys") / holes * 18, 2) : 0;
+        }
+
+        private static double StatNumber(StatRankingRow row, string key) =>
+            row.Values.TryGetValue(key, out var v) && v.ValueKind == System.Text.Json.JsonValueKind.String
+                && double.TryParse(v.GetString()?.Replace(",", "").TrimEnd('%'), NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : 0;
 
         private async Task LoadPlayersFromCsv()
         {
