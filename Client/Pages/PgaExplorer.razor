@@ -298,6 +298,13 @@ else if (rawJson != null)
                 return;
             }
 
+            if (response.Content.Headers.ContentType?.MediaType != "application/json")
+            {
+                error = $"Expected JSON from {lastUrl} but received '{response.Content.Headers.ContentType?.MediaType ?? "unknown"}'. " +
+                        "Make sure the GolfStatsApp.Server project (not the Client) is the startup project so API requests reach the controllers.";
+                return;
+            }
+
             using var doc = JsonDocument.Parse(body);
             var root = doc.RootElement;
             if (root.ValueKind == JsonValueKind.Array && root.EnumerateArray().All(e => e.ValueKind == JsonValueKind.Object))

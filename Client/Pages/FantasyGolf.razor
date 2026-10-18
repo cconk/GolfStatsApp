@@ -3,6 +3,13 @@
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
 
+@if (!Enabled)
+{
+    <PageTitle>Not found</PageTitle>
+    <p>Sorry, there's nothing at this address.</p>
+    return;
+}
+
 <PageTitle>Fantasy Golf Simulator</PageTitle>
 
 <h1>Fantasy Golf Scoring Simulator</h1>
@@ -270,8 +277,11 @@
     private string? errorMessage;
     private SimulationResult? simulationResult;
 
+    private bool Enabled => FeatureFlags.FantasyGolf;
+
     protected override async Task OnInitializedAsync()
     {
+        if (!Enabled) return;
         await LoadAvailablePlayers();
     }
 
