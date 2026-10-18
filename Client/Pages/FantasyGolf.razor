@@ -2,6 +2,14 @@
 @using System.Text.Json
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+
+@if (!Enabled)
+{
+    <PageTitle>Not found</PageTitle>
+    <p>Sorry, there's nothing at this address.</p>
+    return;
+}
 
 <PageTitle>Fantasy Golf Simulator</PageTitle>
 
@@ -270,8 +278,11 @@
     private string? errorMessage;
     private SimulationResult? simulationResult;
 
+    private bool Enabled => Configuration.GetValue<bool>("FeatureFlags:FantasyGolf");
+
     protected override async Task OnInitializedAsync()
     {
+        if (!Enabled) return;
         await LoadAvailablePlayers();
     }
 
