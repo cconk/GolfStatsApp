@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 
 <PageTitle>Golf Stats App</PageTitle>
 
@@ -7,6 +7,8 @@
 <p class="lead text-muted">Welcome to the Golf Stats App! Track and analyze golf tournament statistics for teams and players.</p>
 
 <div class="row g-4">
+    @if (FeatureFlags.Dashboard)
+    {
     <div class="col-12 col-md-6">
         <div class="card h-100 card-hover">
             <div class="card-body d-flex flex-column">
@@ -16,6 +18,9 @@
             </div>
         </div>
     </div>
+    }
+    @if (FeatureFlags.FantasyGolf)
+    {
     <div class="col-12 col-md-6">
         <div class="card h-100 card-hover">
             <div class="card-body d-flex flex-column">
@@ -25,4 +30,5 @@
             </div>
         </div>
     </div>
+    }
 </div>

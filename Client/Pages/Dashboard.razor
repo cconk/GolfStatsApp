@@ -4,6 +4,7 @@
 @inject HttpClient Http
 
 @code {
+  private bool Enabled => FeatureFlags.Dashboard;
   private List<TeamStats> Stats = new();
   private string currentSortColumn = "TeamName";
   private bool sortAscending = true;
@@ -63,11 +64,18 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (!Enabled) return;
         var json = await Http.GetStringAsync("data/teamstats.json");
         Stats = JsonSerializer.Deserialize<List<TeamStats>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<TeamStats>();
         isLoaded = true;
     }
     
+}
+@if (!Enabled)
+{
+    <PageTitle>Not found</PageTitle>
+    <p>Sorry, there's nothing at this address.</p>
+    return;
 }
 <PageTitle>Team Dashboard</PageTitle>
 
