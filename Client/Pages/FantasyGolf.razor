@@ -2,7 +2,6 @@
 @using System.Text.Json
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
-@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @if (!Enabled)
 {
@@ -278,7 +277,7 @@
     private string? errorMessage;
     private SimulationResult? simulationResult;
 
-    private bool Enabled => Configuration.GetValue<bool>("FeatureFlags:FantasyGolf");
+    private bool Enabled => FeatureFlags.FantasyGolf;
 
     protected override async Task OnInitializedAsync()
     {

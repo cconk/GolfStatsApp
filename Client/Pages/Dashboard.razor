@@ -2,10 +2,9 @@
 @using System.Text.Json
 @using GolfStatsApp.Shared
 @inject HttpClient Http
-@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @code {
-  private bool Enabled => Configuration.GetValue<bool>("FeatureFlags:Dashboard");
+  private bool Enabled => FeatureFlags.Dashboard;
   private List<TeamStats> Stats = new();
   private string currentSortColumn = "TeamName";
   private bool sortAscending = true;
