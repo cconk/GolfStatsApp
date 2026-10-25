@@ -1,0 +1,204 @@
+@page "/leagues/{Id:int}"
+@using GolfStatsApp.Client.Services
+@implements IDisposable
+@inject HttpClient Http
+@inject AuthState Auth
+@inject NavigationManager Nav
+
+<PageTitle>@(state?.League.Name ?? "League")</PageTitle>
+
+@if (!Auth.IsLoaded || loading)
+{
+    <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+}
+else if (!Auth.User.IsAuthenticated)
+{
+    <div class="alert alert-info">Please <a href="account">sign in</a> to view this league.</div>
+}
+else if (state is null)
+{
+    <div class="alert alert-warning">League not found, or you're not a member. <a href="leagues">Back to leagues</a></div>
+}
+else
+{
+    <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
+        <h1 class="mb-0">@state.League.Name</h1>
+        <span class="text-muted">Join code <code>@state.League.JoinCode</code> &middot; Draft: <strong>@state.League.DraftStatus</strong></span>
+    </div>
+
+    @if (message is not null)
+    {
+        <div class="alert @(isError ? "alert-danger" : "alert-success") py-2">@message</div>
+    }
+
+    <ul class="nav nav-tabs my-3">
+        <li class="nav-item"><button class="nav-link @(tab == "draft" ? "active" : "")" @onclick='() => tab = "draft"'>Draft</button></li>
+        <li class="nav-item"><button class="nav-link @(tab == "leaderboard" ? "active" : "")" @onclick='() => tab = "leaderboard"'>Leaderboard</button></li>
+    </ul>
+
+    @if (tab == "draft")
+    {
+        <div class="row g-3">
+            <div class="col-12 col-lg-5">
+                <div class="card">
+                    <div class="card-header"><h4>Members</h4></div>
+                    <ul class="list-group list-group-flush">
+                        @foreach (var m in state.Members)
+                        {
+                            <li class="list-group-item d-flex justify-content-between @(m.Id == state.CurrentMemberId ? "active" : "")">
+                                <span>@(m.DraftPosition is int p ? $"{p}. " : "")@m.DisplayName@(m.IsMe ? " (you)" : "")@(m.IsOwner ? " ★" : "")</span>
+                                @if (m.Id == state.CurrentMemberId) { <span>On the clock</span> }
+                            </li>
+                        }
+                    </ul>
+                    @if (state.League.IsOwner && state.League.DraftStatus == "NotStarted")
+                    {
+                        <div class="card-body">
+                            <button class="btn btn-success" disabled="@(state.Members.Count < 2)" @onclick="StartDraft">Start snake draft</button>
+                            @if (state.Members.Count < 2) { <div class="form-text">Share the join code — you need at least 2 members.</div> }
+                        </div>
+                    }
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header"><h4>Picks (@state.Picks.Count / @state.TotalPicks)</h4></div>
+                    <ol class="list-group list-group-flush list-group-numbered">
+                        @foreach (var pick in state.Picks)
+                        {
+                            <li class="list-group-item"><strong>@pick.PlayerName</strong> <span class="text-muted">— @pick.MemberName</span></li>
+                        }
+                    </ol>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-7">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>@(state.League.DraftStatus == "InProgress"
+                            ? (state.IsMyTurn ? "Your pick!" : $"Waiting for {state.CurrentMemberName}")
+                            : "Player pool")</h4>
+                    </div>
+                    <div class="card-body">
+                        <input class="form-control mb-2" placeholder="Search players" @bind="search" @bind:event="oninput" />
+                        <div class="list-group" style="max-height: 28rem; overflow-y: auto;">
+                            @foreach (var p in AvailablePlayers.Take(100))
+                            {
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>@p.PlayerName</span>
+                                    <button class="btn btn-sm btn-success" disabled="@(!state.IsMyTurn)" @onclick="() => Pick(p.PlayerName)">Draft</button>
+                                </div>
+                            }
+                            @if (!AvailablePlayers.Any())
+                            {
+                                <div class="list-group-item text-muted">No players found.</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="d-flex gap-2 mb-2">
+            <a class="btn btn-sm btn-outline-success" href="api/leagues/@Id/leaderboard/export?format=csv" download>Export CSV</a>
+            <a class="btn btn-sm btn-outline-success" href="api/leagues/@Id/leaderboard/export?format=xlsx" download>Export Excel</a>
+        </div>
+        <div class="stats-table-wrapper">
+            <table class="table table-striped stats-table table-cards">
+                <thead><tr><th>Member</th><th class="text-end">Rank</th><th class="text-end">Points</th><th>Players</th></tr></thead>
+                <tbody>
+                @foreach (var e in leaderboard)
+                {
+                    <tr>
+                        <td data-label="Member">@e.DisplayName</td>
+                        <td class="text-end" data-label="Rank">@e.Rank</td>
+                        <td class="text-end" data-label="Points">@e.Points.ToString("0.##")</td>
+                        <td data-label="Players" style="white-space: normal;">@string.Join(", ", e.Players.Select(p => $"{p.PlayerName} ({p.Points:0.##})"))</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (state.League.IsOwner)
+    {
+        <button class="btn btn-sm btn-outline-danger mt-4" @onclick="DeleteLeague">Delete league</button>
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private DraftState? state;
+    private List<GolfPlayerData> players = new();
+    private List<LeaderboardEntry> leaderboard = new();
+    private string tab = "draft";
+    private string search = "";
+    private string? message;
+    private bool isError;
+    private bool loading = true;
+    private Timer? timer;
+
+    private IEnumerable<GolfPlayerData> AvailablePlayers
+    {
+        get
+        {
+            var taken = state?.Picks.Select(p => p.PlayerName).ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new();
+            return players.Where(p => !taken.Contains(p.PlayerName) &&
+                (string.IsNullOrWhiteSpace(search) || p.PlayerName.Contains(search, StringComparison.OrdinalIgnoreCase)));
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.EnsureLoadedAsync();
+        if (Auth.User.IsAuthenticated)
+        {
+            await Refresh();
+            players = await Http.GetFromJsonAsync<List<GolfPlayerData>>("api/PlayerData/players") ?? new();
+            // Poll so members see each other's picks without reloading.
+            timer = new Timer(async _ => await InvokeAsync(PollAsync), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+        }
+        loading = false;
+    }
+
+    private async Task PollAsync()
+    {
+        if (state?.League.DraftStatus == "Complete" && tab != "leaderboard") return;
+        await Refresh();
+        StateHasChanged();
+    }
+
+    private async Task Refresh()
+    {
+        var response = await Http.GetAsync($"api/leagues/{Id}/draft");
+        state = response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<DraftState>() : null;
+        if (state is not null)
+            leaderboard = await Http.GetFromJsonAsync<List<LeaderboardEntry>>($"api/leagues/{Id}/leaderboard") ?? new();
+    }
+
+    private async Task StartDraft() => await Post($"api/leagues/{Id}/draft/start", null, "Draft started!");
+
+    private async Task Pick(string name) =>
+        await Post($"api/leagues/{Id}/draft/pick", new MakePickRequest { PlayerName = name }, $"Drafted {name}.");
+
+    private async Task Post(string url, object? body, string success)
+    {
+        var response = body is null ? await Http.PostAsync(url, null) : await Http.PostAsJsonAsync(url, body);
+        isError = !response.IsSuccessStatusCode;
+        message = isError ? await ApiClient.ReadErrorAsync(response) : success;
+        if (isError && response.StatusCode == System.Net.HttpStatusCode.Conflict) await Refresh();
+        else if (!isError) state = await response.Content.ReadFromJsonAsync<DraftState>();
+    }
+
+    private async Task DeleteLeague()
+    {
+        var response = await Http.DeleteAsync($"api/leagues/{Id}");
+        if (response.IsSuccessStatusCode) Nav.NavigateTo("leagues");
+        else { isError = true; message = await ApiClient.ReadErrorAsync(response); }
+    }
+
+    public void Dispose() => timer?.Dispose();
+}

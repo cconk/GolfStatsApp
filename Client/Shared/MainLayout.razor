@@ -1,4 +1,7 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@using GolfStatsApp.Client.Services
+@implements IDisposable
+@inject ThemeService Theme
 
 <div class="page">
     <div class="sidebar">
@@ -7,7 +10,10 @@
 
     <div class="main">
         <div class="top-row px-4">
-            <a href="https://blazor.net" target="_blank" rel="noopener">About</a>
+            <button class="btn btn-sm btn-outline-secondary" type="button" @onclick="Theme.ToggleAsync"
+                    aria-label="Toggle dark mode" title="Toggle dark mode">
+                @(Theme.Theme == "dark" ? "☀ Light" : "☾ Dark")
+            </button>
         </div>
 
         <main class="content px-3 px-md-4">
@@ -15,3 +21,15 @@
         </main>
     </div>
 </div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        Theme.Changed += OnThemeChanged;
+        await Theme.InitializeAsync();
+    }
+
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Theme.Changed -= OnThemeChanged;
+}

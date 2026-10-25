@@ -1,0 +1,125 @@
+@page "/leagues"
+@using GolfStatsApp.Client.Services
+@inject HttpClient Http
+@inject AuthState Auth
+
+<PageTitle>Leagues</PageTitle>
+<h1>Private leagues</h1>
+
+@if (!Auth.IsLoaded)
+{
+    <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+}
+else if (!Auth.User.IsAuthenticated)
+{
+    <div class="alert alert-info">Please <a href="account">sign in or create an account</a> to join or create a league.</div>
+}
+else
+{
+    @if (message is not null)
+    {
+        <div class="alert @(isError ? "alert-danger" : "alert-success") py-2">@message</div>
+    }
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6">
+            <div class="card h-100">
+                <div class="card-header"><h4>Create a league</h4></div>
+                <div class="card-body">
+                    <EditForm Model="create" OnValidSubmit="Create">
+                        <div class="mb-2">
+                            <label class="form-label">League name</label>
+                            <InputText class="form-control" @bind-Value="create.Name" maxlength="60" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Players per team</label>
+                            <InputNumber class="form-control" @bind-Value="create.PlayersPerTeam" min="1" max="10" />
+                        </div>
+                        <button class="btn btn-success" type="submit">Create</button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="card h-100">
+                <div class="card-header"><h4>Join with a code</h4></div>
+                <div class="card-body">
+                    <EditForm Model="join" OnValidSubmit="Join">
+                        <div class="mb-3">
+                            <label class="form-label">Join code</label>
+                            <InputText class="form-control text-uppercase" @bind-Value="join.JoinCode" maxlength="6" required />
+                        </div>
+                        <button class="btn btn-primary" type="submit">Join</button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="h4">My leagues</h2>
+    @if (leagues is null)
+    {
+        <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+    }
+    else if (leagues.Count == 0)
+    {
+        <p class="text-muted">You're not in any leagues yet.</p>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var l in leagues)
+            {
+                <div class="col-12 col-md-6 col-xl-4">
+                    <div class="card card-hover h-100">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">@l.Name</h5>
+                            <p class="card-text text-muted mb-1">@l.MemberCount member(s) &middot; @l.PlayersPerTeam players each</p>
+                            <p class="card-text mb-1">Draft: <strong>@l.DraftStatus</strong></p>
+                            <p class="card-text">Join code: <code>@l.JoinCode</code></p>
+                            <a class="btn btn-outline-success mt-auto align-self-start" href="leagues/@l.Id">Open</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}
+
+@code {
+    private List<LeagueSummary>? leagues;
+    private CreateLeagueRequest create = new();
+    private JoinLeagueRequest join = new();
+    private string? message;
+    private bool isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.EnsureLoadedAsync();
+        if (Auth.User.IsAuthenticated) await Load();
+    }
+
+    private async Task Load() =>
+        leagues = await Http.GetFromJsonAsync<List<LeagueSummary>>("api/leagues") ?? new();
+
+    private async Task Create()
+    {
+        var response = await Http.PostAsJsonAsync("api/leagues", create);
+        await Report(response, "League created.");
+        if (response.IsSuccessStatusCode) create = new();
+    }
+
+    private async Task Join()
+    {
+        var response = await Http.PostAsJsonAsync("api/leagues/join", join);
+        await Report(response, "Joined league.");
+        if (response.IsSuccessStatusCode) join = new();
+    }
+
+    private async Task Report(HttpResponseMessage response, string success)
+    {
+        isError = !response.IsSuccessStatusCode;
+        message = isError ? await ApiClient.ReadErrorAsync(response) : success;
+        if (!isError) await Load();
+    }
+}

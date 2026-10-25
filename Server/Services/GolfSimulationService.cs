@@ -8,8 +8,12 @@ namespace GolfStatsApp.Server.Services
 {
     public class GolfSimulationService
     {
-        private readonly Random _random = new();
+        private readonly Random _random;
         
+        public GolfSimulationService() : this(new Random()) { }
+
+        // Seedable constructor for deterministic tests.
+        public GolfSimulationService(Random random) => _random = random;
         private readonly Dictionary<int, Dictionary<string, double>> _fedexTable = new()
         {
             { 1, new() { ["pga"] = 500, ["major"] = 750, ["signature"] = 700, ["additional"] = 300 } },

@@ -1,0 +1,193 @@
+@page "/admin"
+@using GolfStatsApp.Client.Services
+@inject HttpClient Http
+@inject AuthState Auth
+
+<PageTitle>Admin</PageTitle>
+<h1>Admin</h1>
+
+@if (!Auth.IsLoaded)
+{
+    <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+}
+else if (!Auth.User.IsAdmin)
+{
+    <div class="alert alert-warning">
+        Administrator access is required. <a href="account">Sign in</a> with an admin account.
+    </div>
+}
+else
+{
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><button class="nav-link @(tab == "teams" ? "active" : "")" @onclick='() => tab = "teams"'>Team results</button></li>
+        <li class="nav-item"><button class="nav-link @(tab == "points" ? "active" : "")" @onclick='() => tab = "points"'>Player points</button></li>
+    </ul>
+
+    @if (message is not null)
+    {
+        <div class="alert @(isError ? "alert-danger" : "alert-success") py-2">@message</div>
+    }
+
+    @if (tab == "teams")
+    {
+        <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">@teams.Count teams</span>
+            <button class="btn btn-sm btn-success" @onclick="NewTeam">Add team</button>
+        </div>
+
+        @if (editingTeam is not null)
+        {
+            <div class="card mb-3">
+                <div class="card-header"><h4>@(editingTeam.Id == 0 ? "New team" : "Edit " + editingTeam.TeamName)</h4></div>
+                <div class="card-body">
+                    <EditForm Model="editingTeam" OnValidSubmit="SaveTeam">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Team name</label>
+                                <InputText class="form-control" @bind-Value="editingTeam.TeamName" required maxlength="100" />
+                            </div>
+                            <div class="col-6 col-md-3"><label class="form-label">Overall avg</label><InputNumber class="form-control" @bind-Value="editingTeam.OverallAverage" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label">Avg (roster)</label><InputNumber class="form-control" @bind-Value="editingTeam.AverageWithRoster" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label">Best score</label><InputNumber class="form-control" @bind-Value="editingTeam.BestTournamentScore" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label">Best tournament</label><InputText class="form-control" @bind-Value="editingTeam.BestTournament" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label">Worst score</label><InputNumber class="form-control" @bind-Value="editingTeam.WorstTournamentScore" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label">Worst tournament</label><InputText class="form-control" @bind-Value="editingTeam.WorstTournament" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label">Roster streak</label><InputNumber class="form-control" @bind-Value="editingTeam.LongestRosterStreak" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label">Wins</label><InputNumber class="form-control" @bind-Value="editingTeam.Wins" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label">Majors</label><InputNumber class="form-control" @bind-Value="editingTeam.Majors" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label">Signatures</label><InputNumber class="form-control" @bind-Value="editingTeam.SignatureEvents" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label">Regulars</label><InputNumber class="form-control" @bind-Value="editingTeam.Regulars" /></div>
+                        </div>
+                        <div class="d-flex gap-2 mt-3">
+                            <button class="btn btn-success" type="submit">Save</button>
+                            <button class="btn btn-outline-secondary" type="button" @onclick="() => editingTeam = null">Cancel</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+
+        <div class="stats-table-wrapper">
+            <table class="table table-striped stats-table table-cards">
+                <thead>
+                    <tr><th>Team</th><th class="text-end">Overall Avg</th><th class="text-end">Wins</th><th class="text-end">Majors</th><th></th></tr>
+                </thead>
+                <tbody>
+                @foreach (var t in teams)
+                {
+                    <tr>
+                        <td data-label="Team">@t.TeamName</td>
+                        <td class="text-end" data-label="Overall Avg">@t.OverallAverage</td>
+                        <td class="text-end" data-label="Wins">@t.Wins</td>
+                        <td class="text-end" data-label="Majors">@t.Majors</td>
+                        <td class="text-end" data-label="">
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => EditTeam(t)">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteTeam(t)">Delete</button>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">Record fantasy points earned by a player. League leaderboards sum these for each drafted player.</p>
+        <EditForm Model="newPoints" OnValidSubmit="AddPoints" class="row g-2 mb-3">
+            <div class="col-12 col-md-4"><InputText class="form-control" placeholder="Player name" @bind-Value="newPoints.PlayerName" required /></div>
+            <div class="col-12 col-md-4"><InputText class="form-control" placeholder="Tournament" @bind-Value="newPoints.Tournament" required /></div>
+            <div class="col-6 col-md-2"><InputNumber class="form-control" placeholder="Points" @bind-Value="newPoints.Points" /></div>
+            <div class="col-6 col-md-2"><button class="btn btn-success w-100" type="submit">Add</button></div>
+        </EditForm>
+
+        <div class="stats-table-wrapper">
+            <table class="table table-striped stats-table table-cards">
+                <thead><tr><th>Player</th><th>Tournament</th><th class="text-end">Points</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var p in points)
+                {
+                    <tr>
+                        <td data-label="Player">@p.PlayerName</td>
+                        <td data-label="Tournament">@p.Tournament</td>
+                        <td class="text-end" data-label="Points">@p.Points</td>
+                        <td class="text-end" data-label=""><button class="btn btn-sm btn-outline-danger" @onclick="() => DeletePoints(p)">Delete</button></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private string tab = "teams";
+    private List<TeamStats> teams = new();
+    private List<PlayerPointsEntry> points = new();
+    private TeamStats? editingTeam;
+    private PlayerPointsEntry newPoints = new();
+    private string? message;
+    private bool isError;
+    private bool loaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.EnsureLoadedAsync();
+        await LoadIfAdmin();
+    }
+
+    protected override async Task OnParametersSetAsync() => await LoadIfAdmin();
+
+    private async Task LoadIfAdmin()
+    {
+        if (loaded || !Auth.User.IsAdmin) return;
+        loaded = true;
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        teams = await Http.GetFromJsonAsync<List<TeamStats>>("api/teams") ?? new();
+        points = await Http.GetFromJsonAsync<List<PlayerPointsEntry>>("api/player-points") ?? new();
+    }
+
+    private void NewTeam() => editingTeam = new TeamStats();
+
+    private void EditTeam(TeamStats t) => editingTeam = new TeamStats
+    {
+        Id = t.Id, TeamName = t.TeamName, OverallAverage = t.OverallAverage, AverageWithRoster = t.AverageWithRoster,
+        BestTournamentScore = t.BestTournamentScore, BestTournament = t.BestTournament,
+        WorstTournamentScore = t.WorstTournamentScore, WorstTournament = t.WorstTournament,
+        LongestRosterStreak = t.LongestRosterStreak, Wins = t.Wins, Majors = t.Majors,
+        SignatureEvents = t.SignatureEvents, Regulars = t.Regulars
+    };
+
+    private async Task SaveTeam()
+    {
+        if (editingTeam is null) return;
+        var response = editingTeam.Id == 0
+            ? await Http.PostAsJsonAsync("api/teams", editingTeam)
+            : await Http.PutAsJsonAsync($"api/teams/{editingTeam.Id}", editingTeam);
+        await Report(response, "Team saved.");
+        if (response.IsSuccessStatusCode) editingTeam = null;
+    }
+
+    private async Task DeleteTeam(TeamStats t) =>
+        await Report(await Http.DeleteAsync($"api/teams/{t.Id}"), $"Deleted {t.TeamName}.");
+
+    private async Task AddPoints()
+    {
+        var response = await Http.PostAsJsonAsync("api/player-points", newPoints);
+        await Report(response, "Points recorded.");
+        if (response.IsSuccessStatusCode) newPoints = new();
+    }
+
+    private async Task DeletePoints(PlayerPointsEntry p) =>
+        await Report(await Http.DeleteAsync($"api/player-points/{p.Id}"), "Entry deleted.");
+
+    private async Task Report(HttpResponseMessage response, string success)
+    {
+        isError = !response.IsSuccessStatusCode;
+        message = isError ? await ApiClient.ReadErrorAsync(response) : success;
+        if (!isError) await Reload();
+    }
+}
