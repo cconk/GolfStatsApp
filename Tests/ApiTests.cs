@@ -108,7 +108,7 @@ public class ApiTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task Leagues_CreateJoinAndStartDraft()
+    public async Task Leagues_CreateJoinAndManageSchedule()
     {
         var owner = await Register(this, $"owner-{Guid.NewGuid():N}@example.com", "Owner");
         var friend = await Register(this, $"friend-{Guid.NewGuid():N}@example.com", "Friend");
@@ -117,25 +117,25 @@ public class ApiTests : IClassFixture<ApiFactory>
         var league = (await created.Content.ReadFromJsonAsync<LeagueSummary>())!;
         Assert.Equal(6, league.JoinCode.Length);
 
-        // Can't start alone.
-        Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostAsync($"api/leagues/{league.Id}/draft/start", null)).StatusCode);
-
         var joined = await friend.PostAsJsonAsync("api/leagues/join", new JoinLeagueRequest { JoinCode = league.JoinCode.ToLowerInvariant() });
         joined.EnsureSuccessStatusCode();
 
-        // Only the owner can start.
-        Assert.Equal(HttpStatusCode.Forbidden, (await friend.PostAsync($"api/leagues/{league.Id}/draft/start", null)).StatusCode);
+        var add = new AddLeagueTournamentRequest { TournamentId = "R2099001", Name = "Test Open", Segment = 1, EventType = "pga" };
+        // Only the owner can manage the schedule.
+        Assert.Equal(HttpStatusCode.Forbidden, (await friend.PostAsJsonAsync($"api/leagues/{league.Id}/tournaments", add)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostAsJsonAsync($"api/leagues/{league.Id}/tournaments",
+            new AddLeagueTournamentRequest { TournamentId = "R2099002", Segment = 9 })).StatusCode);
 
-        var started = await owner.PostAsync($"api/leagues/{league.Id}/draft/start", null);
-        started.EnsureSuccessStatusCode();
-        var state = (await started.Content.ReadFromJsonAsync<DraftState>())!;
-        Assert.Equal(DraftStatuses.InProgress, state.League.DraftStatus);
-        Assert.Equal(4, state.TotalPicks);
-        Assert.Equal(new[] { 1, 2 }, state.Members.Select(m => m.DraftPosition!.Value).OrderBy(x => x));
-        Assert.NotNull(state.CurrentMemberId);
+        var added = await owner.PostAsJsonAsync($"api/leagues/{league.Id}/tournaments", add);
+        added.EnsureSuccessStatusCode();
+        var state = (await added.Content.ReadFromJsonAsync<LeagueState>())!;
+        Assert.Equal(2, state.Members.Count);
+        var tournament = Assert.Single(state.Tournaments);
+        Assert.Equal(TournamentStatuses.Upcoming, tournament.Status);
 
         var board = await owner.GetFromJsonAsync<List<LeaderboardEntry>>($"api/leagues/{league.Id}/leaderboard");
         Assert.Equal(2, board!.Count);
+        Assert.All(board, e => Assert.Equal(0, e.Points));
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public class ApiTests : IClassFixture<ApiFactory>
         var league = (await (await owner.PostAsJsonAsync("api/leagues", new CreateLeagueRequest { Name = "Private" }))
             .Content.ReadFromJsonAsync<LeagueSummary>())!;
 
-        Assert.Equal(HttpStatusCode.NotFound, (await outsider.GetAsync($"api/leagues/{league.Id}/draft")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await outsider.GetAsync($"api/leagues/{league.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await outsider.DeleteAsync($"api/leagues/{league.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await NewClient().GetAsync("api/leagues")).StatusCode);
     }

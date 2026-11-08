@@ -14,7 +14,10 @@ namespace GolfStatsApp.Server.Services
 
         // Seedable constructor for deterministic tests.
         public GolfSimulationService(Random random) => _random = random;
-        private readonly Dictionary<int, Dictionary<string, double>> _fedexTable = new()
+        private Dictionary<int, Dictionary<string, double>> _fedexTable => FedExTable;
+
+        // FedExCup points by finish position and event type.
+        internal static readonly Dictionary<int, Dictionary<string, double>> FedExTable = new()
         {
             { 1, new() { ["pga"] = 500, ["major"] = 750, ["signature"] = 700, ["additional"] = 300 } },
             { 2, new() { ["pga"] = 300, ["major"] = 500, ["signature"] = 400, ["additional"] = 165 } },

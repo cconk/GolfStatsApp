@@ -22,6 +22,9 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<GolfSimulationService>();
 builder.Services.AddScoped<PlayerDataService>();
 builder.Services.AddPgaTourClient(builder.Configuration);
+builder.Services.AddScoped<TournamentSyncService>();
+if (!builder.Environment.IsEnvironment("Testing"))
+    builder.Services.AddHostedService<TournamentSyncBackgroundService>();
 
 var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=App_Data/golfstats.db";
 const string sqlitePrefix = "Data Source=";

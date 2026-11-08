@@ -9,196 +9,466 @@
 
 @if (!Auth.IsLoaded || loading)
 {
-    <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+	<div class="spinner-border spinner-border-sm text-success" role="status"></div>
 }
 else if (!Auth.User.IsAuthenticated)
 {
-    <div class="alert alert-info">Please <a href="account">sign in</a> to view this league.</div>
+	<div class="alert alert-info">Please <a href="account">sign in</a> to view this league.</div>
 }
 else if (state is null)
 {
-    <div class="alert alert-warning">League not found, or you're not a member. <a href="leagues">Back to leagues</a></div>
+	<div class="alert alert-warning">League not found, or you're not a member. <a href="leagues">Back to leagues</a></div>
 }
 else
 {
-    <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
-        <h1 class="mb-0">@state.League.Name</h1>
-        <span class="text-muted">Join code <code>@state.League.JoinCode</code> &middot; Draft: <strong>@state.League.DraftStatus</strong></span>
-    </div>
+	<div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
+		<h1 class="mb-0">@state.League.Name</h1>
+		<span class="text-muted">Join code <code>@state.League.JoinCode</code> &middot; @state.League.PlayersPerTeam starters + @LeagueRules.BenchSlots bench</span>
+	</div>
 
-    @if (message is not null)
-    {
-        <div class="alert @(isError ? "alert-danger" : "alert-success") py-2">@message</div>
-    }
+	@if (message is not null)
+	{
+		<div class="alert @(isError ? "alert-danger" : "alert-success") py-2">@message</div>
+	}
 
-    <ul class="nav nav-tabs my-3">
-        <li class="nav-item"><button class="nav-link @(tab == "draft" ? "active" : "")" @onclick='() => tab = "draft"'>Draft</button></li>
-        <li class="nav-item"><button class="nav-link @(tab == "leaderboard" ? "active" : "")" @onclick='() => tab = "leaderboard"'>Leaderboard</button></li>
-    </ul>
+	<ul class="nav nav-tabs my-3">
+		<li class="nav-item"><button class="nav-link @(tab == "roster" ? "active" : "")" @onclick='() => SetTab("roster")'>Roster</button></li>
+		<li class="nav-item"><button class="nav-link @(tab == "scores" ? "active" : "")" @onclick='() => SetTab("scores")'>Tournament scores</button></li>
+		<li class="nav-item"><button class="nav-link @(tab == "leaderboard" ? "active" : "")" @onclick='() => SetTab("leaderboard")'>Season standings</button></li>
+		<li class="nav-item"><button class="nav-link @(tab == "schedule" ? "active" : "")" @onclick='() => SetTab("schedule")'>Schedule</button></li>
+	</ul>
 
-    @if (tab == "draft")
-    {
-        <div class="row g-3">
-            <div class="col-12 col-lg-5">
-                <div class="card">
-                    <div class="card-header"><h4>Members</h4></div>
-                    <ul class="list-group list-group-flush">
-                        @foreach (var m in state.Members)
-                        {
-                            <li class="list-group-item d-flex justify-content-between @(m.Id == state.CurrentMemberId ? "active" : "")">
-                                <span>@(m.DraftPosition is int p ? $"{p}. " : "")@m.DisplayName@(m.IsMe ? " (you)" : "")@(m.IsOwner ? " ★" : "")</span>
-                                @if (m.Id == state.CurrentMemberId) { <span>On the clock</span> }
-                            </li>
-                        }
-                    </ul>
-                    @if (state.League.IsOwner && state.League.DraftStatus == "NotStarted")
-                    {
-                        <div class="card-body">
-                            <button class="btn btn-success" disabled="@(state.Members.Count < 2)" @onclick="StartDraft">Start snake draft</button>
-                            @if (state.Members.Count < 2) { <div class="form-text">Share the join code — you need at least 2 members.</div> }
-                        </div>
-                    }
-                </div>
+	@if (tab is "roster" or "scores")
+	{
+		@if (state.Tournaments.Count == 0)
+		{
+			<div class="alert alert-info">No tournaments on the schedule yet. @(state.League.IsOwner ? "Add some on the Schedule tab." : "Ask the league owner to add some.")</div>
+		}
+		else
+		{
+			<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+				<select class="form-select w-auto" value="@selectedTournamentId" @onchange="SelectTournament">
+					@foreach (var t in state.Tournaments)
+					{
+						<option value="@t.Id">@t.Name — Segment @t.Segment (@t.Status)</option>
+					}
+				</select>
+				<button class="btn btn-sm btn-outline-secondary" @onclick="RefreshScoring">Refresh live scoring</button>
+			</div>
+		}
+	}
 
-                <div class="card mt-3">
-                    <div class="card-header"><h4>Picks (@state.Picks.Count / @state.TotalPicks)</h4></div>
-                    <ol class="list-group list-group-flush list-group-numbered">
-                        @foreach (var pick in state.Picks)
-                        {
-                            <li class="list-group-item"><strong>@pick.PlayerName</strong> <span class="text-muted">— @pick.MemberName</span></li>
-                        }
-                    </ol>
-                </div>
-            </div>
+	@if (tab == "roster" && lineup is not null)
+	{
+		var editable = lineup.NextEditableRound > 0;
+		<p class="text-muted small">
+			@if (!editable) { <span>This tournament is complete.</span> }
+			else if (lineup.NextEditableRound == 1) { <span>Changes apply from Round 1.</span> }
+			else { <span>Round @(lineup.NextEditableRound - 1) is under way. Changes apply from Round @lineup.NextEditableRound.</span> }
+			Each golfer can start @LeagueRules.StartsPerSegment times per segment. Bench golfers who made the cut auto-swap in for cut starters, in priority order.
+		</p>
 
-            <div class="col-12 col-lg-7">
-                <div class="card">
-                    <div class="card-header">
-                        <h4>@(state.League.DraftStatus == "InProgress"
-                            ? (state.IsMyTurn ? "Your pick!" : $"Waiting for {state.CurrentMemberName}")
-                            : "Player pool")</h4>
-                    </div>
-                    <div class="card-body">
-                        <input class="form-control mb-2" placeholder="Search players" @bind="search" @bind:event="oninput" />
-                        <div class="list-group" style="max-height: 28rem; overflow-y: auto;">
-                            @foreach (var p in AvailablePlayers.Take(100))
-                            {
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>@p.PlayerName</span>
-                                    <button class="btn btn-sm btn-success" disabled="@(!state.IsMyTurn)" @onclick="() => Pick(p.PlayerName)">Draft</button>
-                                </div>
-                            }
-                            @if (!AvailablePlayers.Any())
-                            {
-                                <div class="list-group-item text-muted">No players found.</div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-    else
-    {
-        <div class="d-flex gap-2 mb-2">
-            <a class="btn btn-sm btn-outline-success" href="api/leagues/@Id/leaderboard/export?format=csv" download>Export CSV</a>
-            <a class="btn btn-sm btn-outline-success" href="api/leagues/@Id/leaderboard/export?format=xlsx" download>Export Excel</a>
-        </div>
-        <div class="stats-table-wrapper">
-            <table class="table table-striped stats-table table-cards">
-                <thead><tr><th>Member</th><th class="text-end">Rank</th><th class="text-end">Points</th><th>Players</th></tr></thead>
-                <tbody>
-                @foreach (var e in leaderboard)
-                {
-                    <tr>
-                        <td data-label="Member">@e.DisplayName</td>
-                        <td class="text-end" data-label="Rank">@e.Rank</td>
-                        <td class="text-end" data-label="Points">@e.Points.ToString("0.##")</td>
-                        <td data-label="Players" style="white-space: normal;">@string.Join(", ", e.Players.Select(p => $"{p.PlayerName} ({p.Points:0.##})"))</td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
-    }
+		<div class="row g-3">
+			<div class="col-12 col-lg-5">
+				<div class="card">
+					<div class="card-header"><h4>Starting lineup (@starters.Count / @lineup.StarterSlots)</h4></div>
+					<ul class="list-group list-group-flush">
+						@foreach (var p in starters)
+						{
+							<li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+								<span>
+									@p.Name
+									@if (captainId == p.PlayerId) { <span class="badge bg-warning text-dark ms-1">C</span> }
+								</span>
+								<span class="d-flex gap-1">
+									@if (editable && !lineup.CaptainLocked && captainId != p.PlayerId)
+									{
+										<button class="btn btn-sm btn-outline-warning" @onclick="() => captainId = p.PlayerId">Make captain</button>
+									}
+									@if (editable)
+									{
+										<button class="btn btn-sm btn-outline-secondary" disabled="@(bench.Count >= lineup.BenchSlots)" @onclick="() => ToBench(p)">Bench</button>
+										<button class="btn btn-sm btn-outline-danger" @onclick="() => Remove(p)">Remove</button>
+									}
+								</span>
+							</li>
+						}
+					</ul>
+				</div>
 
-    @if (state.League.IsOwner)
-    {
-        <button class="btn btn-sm btn-outline-danger mt-4" @onclick="DeleteLeague">Delete league</button>
-    }
+				<div class="card mt-3">
+					<div class="card-header"><h4>Bench (@bench.Count / @lineup.BenchSlots)</h4></div>
+					<ul class="list-group list-group-flush">
+						@for (var i = 0; i < bench.Count; i++)
+						{
+							var p = bench[i];
+							var index = i;
+							<li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+								<span>Priority @(index + 1): @p.Name</span>
+								@if (editable)
+								{
+									<span class="d-flex gap-1">
+										@if (index > 0) { <button class="btn btn-sm btn-outline-secondary" @onclick="() => MoveUp(index)">&uarr;</button> }
+										<button class="btn btn-sm btn-outline-success" disabled="@(starters.Count >= lineup.StarterSlots)" @onclick="() => ToStarters(p)">Start</button>
+										<button class="btn btn-sm btn-outline-danger" @onclick="() => Remove(p)">Remove</button>
+									</span>
+								}
+							</li>
+						}
+					</ul>
+				</div>
+
+				@if (editable)
+				{
+					<button class="btn btn-success mt-3" disabled="@(starters.Count != lineup.StarterSlots)" @onclick="SaveLineup">Save lineup</button>
+				}
+
+				@if (lineup.Score is not null)
+				{
+					<div class="card mt-3">
+						<div class="card-header"><h4>My points: @lineup.Score.Total.ToString("0.##")</h4></div>
+						<ScoreTable Golfers="lineup.Score.Golfers" />
+					</div>
+				}
+			</div>
+
+			<div class="col-12 col-lg-7">
+				<div class="card">
+					<div class="card-header"><h4>Player pool</h4></div>
+					<div class="card-body">
+						@if (!editable) { <div class="text-muted">The player pool is closed.</div> }
+						else if (!lineup.FieldAvailable) { <div class="text-muted">The player pool opens once the field has been announced.</div> }
+						else
+						{
+							<input class="form-control mb-2" placeholder="Search players" @bind="search" @bind:event="oninput" />
+							<div class="stats-table-wrapper" style="max-height: 32rem; overflow-y: auto;">
+								<table class="table table-sm table-striped stats-table">
+									<thead><tr><th>Golfer</th><th class="text-end">Pos</th><th class="text-end">Starts left</th><th class="text-end">Prev event</th><th class="text-end">Season</th><th></th></tr></thead>
+									<tbody>
+									@foreach (var g in Pool.Take(150))
+									{
+										<tr>
+											<td>@g.Name</td>
+											<td class="text-end">@g.Position</td>
+											<td class="text-end">@g.StartsRemaining</td>
+											<td class="text-end">@(g.PreviousEventPoints?.ToString("0.#") ?? "—")</td>
+											<td class="text-end">@g.SeasonPoints.ToString("0.#")</td>
+											<td class="text-end text-nowrap">
+												<button class="btn btn-sm btn-success" disabled="@(starters.Count >= lineup.StarterSlots || g.StartsRemaining == 0 || g.IsOut)" @onclick="() => Add(g, true)">Start</button>
+												<button class="btn btn-sm btn-outline-secondary" disabled="@(bench.Count >= lineup.BenchSlots || g.StartsRemaining == 0 || g.IsOut)" @onclick="() => Add(g, false)">Bench</button>
+											</td>
+										</tr>
+									}
+									</tbody>
+								</table>
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+	else if (tab == "scores")
+	{
+		@foreach (var team in scores)
+		{
+			<div class="card mb-3">
+				<div class="card-header d-flex justify-content-between"><h4 class="mb-0">@team.DisplayName</h4><strong>@team.Total.ToString("0.##")</strong></div>
+				@if (team.Golfers.Count == 0) { <div class="card-body text-muted">No points yet (lineups are hidden until play begins).</div> }
+				else { <ScoreTable Golfers="team.Golfers" /> }
+			</div>
+		}
+	}
+	else if (tab == "leaderboard")
+	{
+		<div class="d-flex gap-2 mb-2">
+			<a class="btn btn-sm btn-outline-success" href="api/leagues/@Id/leaderboard/export?format=csv" download>Export CSV</a>
+			<a class="btn btn-sm btn-outline-success" href="api/leagues/@Id/leaderboard/export?format=xlsx" download>Export Excel</a>
+		</div>
+		<div class="stats-table-wrapper">
+			<table class="table table-striped stats-table table-cards">
+				<thead><tr><th>Member</th><th class="text-end">Rank</th><th class="text-end">Points</th><th>Tournaments</th></tr></thead>
+				<tbody>
+				@foreach (var e in leaderboard)
+				{
+					<tr>
+						<td data-label="Member">@e.DisplayName</td>
+						<td class="text-end" data-label="Rank">@e.Rank</td>
+						<td class="text-end" data-label="Points">@e.Points.ToString("0.##")</td>
+						<td data-label="Tournaments" style="white-space: normal;">@string.Join(", ", e.Tournaments.Select(t => $"{t.Name} ({t.Points:0.##})"))</td>
+					</tr>
+				}
+				</tbody>
+			</table>
+		</div>
+	}
+	else if (tab == "schedule")
+	{
+		<div class="stats-table-wrapper mb-3">
+			<table class="table table-striped stats-table table-cards">
+				<thead><tr><th>Tournament</th><th>Segment</th><th>Type</th><th>Status</th><th></th></tr></thead>
+				<tbody>
+				@foreach (var t in state.Tournaments)
+				{
+					<tr>
+						<td data-label="Tournament">@t.Name <span class="text-muted small">(@t.TournamentId)</span></td>
+						<td data-label="Segment">@t.Segment</td>
+						<td data-label="Type">@t.EventType</td>
+						<td data-label="Status">@t.Status</td>
+						<td class="text-end">
+							@if (state.League.IsOwner) { <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveTournament(t)">Remove</button> }
+						</td>
+					</tr>
+				}
+				</tbody>
+			</table>
+		</div>
+
+		@if (state.League.IsOwner)
+		{
+			<div class="card">
+				<div class="card-header"><h4>Add a PGA TOUR event</h4></div>
+				<div class="card-body row g-2 align-items-end">
+					<div class="col-12 col-md-5">
+						<label class="form-label">Event</label>
+						<select class="form-select" @bind="newTournament.TournamentId">
+							<option value="">Select…</option>
+							@foreach (var e in pgaSchedule.Where(e => e.TournamentId is not null && state.Tournaments.All(t => t.TournamentId != e.TournamentId)))
+							{
+								<option value="@e.TournamentId">@e.TournamentName (@e.DisplayDate)</option>
+							}
+						</select>
+					</div>
+					<div class="col-6 col-md-2">
+						<label class="form-label">Segment</label>
+						<InputNumber class="form-control" @bind-Value="newTournament.Segment" min="1" max="4" />
+					</div>
+					<div class="col-6 col-md-2">
+						<label class="form-label">Type</label>
+						<select class="form-select" @bind="newTournament.EventType">
+							@foreach (var type in LeagueRules.EventTypes) { <option value="@type">@type</option> }
+						</select>
+					</div>
+					<div class="col-12 col-md-3"><button class="btn btn-success w-100" @onclick="AddTournament">Add</button></div>
+					<div class="form-text">FedExCup bonus points (1/10th) apply in segments 1-@LeagueRules.FedExBonusMaxSegment.</div>
+				</div>
+			</div>
+		}
+	}
+
+	@if (state.League.IsOwner)
+	{
+		<button class="btn btn-sm btn-outline-danger mt-4" @onclick="DeleteLeague">Delete league</button>
+	}
 }
 
 @code {
-    [Parameter] public int Id { get; set; }
+	[Parameter] public int Id { get; set; }
 
-    private DraftState? state;
-    private List<GolfPlayerData> players = new();
-    private List<LeaderboardEntry> leaderboard = new();
-    private string tab = "draft";
-    private string search = "";
-    private string? message;
-    private bool isError;
-    private bool loading = true;
-    private Timer? timer;
+	private LeagueState? state;
+	private LineupState? lineup;
+	private List<LineupPlayerDto> starters = new();
+	private List<LineupPlayerDto> bench = new();
+	private string? captainId;
+	private List<TeamTournamentScore> scores = new();
+	private List<LeaderboardEntry> leaderboard = new();
+	private List<PgaScheduleEvent> pgaSchedule = new();
+	private AddLeagueTournamentRequest newTournament = new();
+	private int selectedTournamentId;
+	private string tab = "roster";
+	private string search = "";
+	private string? message;
+	private bool isError;
+	private bool loading = true;
+	private bool dirty;
+	private Timer? timer;
 
-    private IEnumerable<GolfPlayerData> AvailablePlayers
-    {
-        get
-        {
-            var taken = state?.Picks.Select(p => p.PlayerName).ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new();
-            return players.Where(p => !taken.Contains(p.PlayerName) &&
-                (string.IsNullOrWhiteSpace(search) || p.PlayerName.Contains(search, StringComparison.OrdinalIgnoreCase)));
-        }
-    }
+	private IEnumerable<FieldGolferDto> Pool
+	{
+		get
+		{
+			var taken = starters.Concat(bench).Select(p => p.PlayerId).ToHashSet();
+			return (lineup?.Field ?? new()).Where(p => !taken.Contains(p.PlayerId) &&
+				(string.IsNullOrWhiteSpace(search) || p.Name.Contains(search, StringComparison.OrdinalIgnoreCase)));
+		}
+	}
 
-    protected override async Task OnInitializedAsync()
-    {
-        await Auth.EnsureLoadedAsync();
-        if (Auth.User.IsAuthenticated)
-        {
-            await Refresh();
-            players = await Http.GetFromJsonAsync<List<GolfPlayerData>>("api/PlayerData/players") ?? new();
-            // Poll so members see each other's picks without reloading.
-            timer = new Timer(async _ => await InvokeAsync(PollAsync), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
-        }
-        loading = false;
-    }
+	protected override async Task OnInitializedAsync()
+	{
+		await Auth.EnsureLoadedAsync();
+		if (Auth.User.IsAuthenticated)
+		{
+			await LoadLeague();
+			if (state is not null)
+			{
+				var current = state.Tournaments.FirstOrDefault(t => t.Status != TournamentStatuses.Final) ?? state.Tournaments.LastOrDefault();
+				selectedTournamentId = current?.Id ?? 0;
+				await LoadTab();
+				timer = new Timer(async _ => await InvokeAsync(PollAsync), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+			}
+		}
+		loading = false;
+	}
 
-    private async Task PollAsync()
-    {
-        if (state?.League.DraftStatus == "Complete" && tab != "leaderboard") return;
-        await Refresh();
-        StateHasChanged();
-    }
+	private async Task PollAsync()
+	{
+		if (dirty || tab == "schedule") return;
+		await LoadTab();
+		StateHasChanged();
+	}
 
-    private async Task Refresh()
-    {
-        var response = await Http.GetAsync($"api/leagues/{Id}/draft");
-        state = response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<DraftState>() : null;
-        if (state is not null)
-            leaderboard = await Http.GetFromJsonAsync<List<LeaderboardEntry>>($"api/leagues/{Id}/leaderboard") ?? new();
-    }
+	private async Task LoadLeague()
+	{
+		var response = await Http.GetAsync($"api/leagues/{Id}");
+		state = response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<LeagueState>() : null;
+	}
 
-    private async Task StartDraft() => await Post($"api/leagues/{Id}/draft/start", null, "Draft started!");
+	private async Task SetTab(string value)
+	{
+		tab = value;
+		message = null;
+		await LoadTab();
+	}
 
-    private async Task Pick(string name) =>
-        await Post($"api/leagues/{Id}/draft/pick", new MakePickRequest { PlayerName = name }, $"Drafted {name}.");
+	private async Task SelectTournament(ChangeEventArgs e)
+	{
+		selectedTournamentId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+		message = null;
+		await LoadTab();
+	}
 
-    private async Task Post(string url, object? body, string success)
-    {
-        var response = body is null ? await Http.PostAsync(url, null) : await Http.PostAsJsonAsync(url, body);
-        isError = !response.IsSuccessStatusCode;
-        message = isError ? await ApiClient.ReadErrorAsync(response) : success;
-        if (isError && response.StatusCode == System.Net.HttpStatusCode.Conflict) await Refresh();
-        else if (!isError) state = await response.Content.ReadFromJsonAsync<DraftState>();
-    }
+	private async Task LoadTab()
+	{
+		switch (tab)
+		{
+			case "roster" when selectedTournamentId > 0:
+				lineup = await Http.GetFromJsonAsync<LineupState>($"api/leagues/{Id}/tournaments/{selectedTournamentId}/lineup");
+				ResetEditor();
+				break;
+			case "scores" when selectedTournamentId > 0:
+				scores = await Http.GetFromJsonAsync<List<TeamTournamentScore>>($"api/leagues/{Id}/tournaments/{selectedTournamentId}/scores") ?? new();
+				break;
+			case "leaderboard":
+				leaderboard = await Http.GetFromJsonAsync<List<LeaderboardEntry>>($"api/leagues/{Id}/leaderboard") ?? new();
+				break;
+			case "schedule" when pgaSchedule.Count == 0:
+				try { pgaSchedule = await Http.GetFromJsonAsync<List<PgaScheduleEvent>>($"api/PgaTour/schedule/{DateTime.Now.Year}") ?? new(); }
+				catch (HttpRequestException) { pgaSchedule = new(); }
+				break;
+		}
+	}
 
-    private async Task DeleteLeague()
-    {
-        var response = await Http.DeleteAsync($"api/leagues/{Id}");
-        if (response.IsSuccessStatusCode) Nav.NavigateTo("leagues");
-        else { isError = true; message = await ApiClient.ReadErrorAsync(response); }
-    }
+	private void ResetEditor()
+	{
+		starters = lineup?.Starters.ToList() ?? new();
+		bench = lineup?.Bench.ToList() ?? new();
+		captainId = lineup?.CaptainPlayerId;
+		dirty = false;
+	}
 
-    public void Dispose() => timer?.Dispose();
+	private void Add(FieldGolferDto g, bool starter)
+	{
+		(starter ? starters : bench).Add(new LineupPlayerDto { PlayerId = g.PlayerId, Name = g.Name });
+		dirty = true;
+	}
+
+	private void Remove(LineupPlayerDto p)
+	{
+		if (lineup?.CaptainLocked == true && p.PlayerId == captainId)
+		{
+			isError = true;
+			message = "Your captain is locked for this tournament.";
+			return;
+		}
+		starters.Remove(p);
+		bench.Remove(p);
+		if (captainId == p.PlayerId) captainId = null;
+		dirty = true;
+	}
+
+	private void ToBench(LineupPlayerDto p)
+	{
+		if (lineup?.CaptainLocked == true && p.PlayerId == captainId)
+		{
+			isError = true;
+			message = "Your captain is locked for this tournament.";
+			return;
+		}
+		starters.Remove(p);
+		bench.Add(p);
+		if (captainId == p.PlayerId) captainId = null;
+		dirty = true;
+	}
+
+	private void ToStarters(LineupPlayerDto p)
+	{
+		bench.Remove(p);
+		starters.Add(p);
+		dirty = true;
+	}
+
+	private void MoveUp(int index)
+	{
+		(bench[index - 1], bench[index]) = (bench[index], bench[index - 1]);
+		dirty = true;
+	}
+
+	private async Task SaveLineup()
+	{
+		var request = new SaveLineupRequest
+		{
+			StarterIds = starters.Select(p => p.PlayerId).ToList(),
+			BenchIds = bench.Select(p => p.PlayerId).ToList(),
+			CaptainId = captainId
+		};
+		var response = await Http.PutAsJsonAsync($"api/leagues/{Id}/tournaments/{selectedTournamentId}/lineup", request);
+		isError = !response.IsSuccessStatusCode;
+		message = isError ? await ApiClient.ReadErrorAsync(response) : "Lineup saved.";
+		if (!isError)
+		{
+			lineup = await response.Content.ReadFromJsonAsync<LineupState>();
+			ResetEditor();
+		}
+	}
+
+	private async Task RefreshScoring()
+	{
+		var response = await Http.PostAsync($"api/leagues/{Id}/tournaments/{selectedTournamentId}/refresh", null);
+		isError = !response.IsSuccessStatusCode;
+		message = isError ? await ApiClient.ReadErrorAsync(response) : "Scoring updated.";
+		await LoadLeague();
+		await LoadTab();
+	}
+
+	private async Task AddTournament()
+	{
+		var match = pgaSchedule.FirstOrDefault(e => e.TournamentId == newTournament.TournamentId);
+		newTournament.Name = match?.TournamentName ?? newTournament.TournamentId;
+		newTournament.StartDate = match?.DisplayDate is { } d && DateTime.TryParse(d.Split('-')[0].Trim() + " " + DateTime.Now.Year, out var parsed) ? parsed : null;
+		var response = await Http.PostAsJsonAsync($"api/leagues/{Id}/tournaments", newTournament);
+		await ReportState(response, "Tournament added.");
+		if (!isError) newTournament = new() { Segment = newTournament.Segment, EventType = newTournament.EventType };
+	}
+
+	private async Task RemoveTournament(LeagueTournamentDto t) =>
+		await ReportState(await Http.DeleteAsync($"api/leagues/{Id}/tournaments/{t.Id}"), $"Removed {t.Name}.");
+
+	private async Task ReportState(HttpResponseMessage response, string success)
+	{
+		isError = !response.IsSuccessStatusCode;
+		message = isError ? await ApiClient.ReadErrorAsync(response) : success;
+		if (isError) return;
+		state = await response.Content.ReadFromJsonAsync<LeagueState>();
+		if (state is not null && state.Tournaments.All(t => t.Id != selectedTournamentId))
+			selectedTournamentId = state.Tournaments.FirstOrDefault()?.Id ?? 0;
+	}
+
+	private async Task DeleteLeague()
+	{
+		var response = await Http.DeleteAsync($"api/leagues/{Id}");
+		if (response.IsSuccessStatusCode) Nav.NavigateTo("leagues");
+		else { isError = true; message = await ApiClient.ReadErrorAsync(response); }
+	}
+
+	public void Dispose() => timer?.Dispose();
 }

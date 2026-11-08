@@ -92,7 +92,7 @@ else
     }
     else
     {
-        <p class="text-muted">Record fantasy points earned by a player. League leaderboards sum these for each drafted player.</p>
+        <p class="text-muted">Record reference fantasy points earned by a player. League standings are scored automatically from PGA TOUR scorecards.</p>
         <EditForm Model="newPoints" OnValidSubmit="AddPoints" class="row g-2 mb-3">
             <div class="col-12 col-md-4"><InputText class="form-control" placeholder="Player name" @bind-Value="newPoints.PlayerName" required /></div>
             <div class="col-12 col-md-4"><InputText class="form-control" placeholder="Tournament" @bind-Value="newPoints.Tournament" required /></div>
