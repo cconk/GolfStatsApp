@@ -5,6 +5,11 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="Server/GolfStatsApp.Server.csproj" />
+  <Folder Name="/Server/" />
+  <Folder Name="/Shared/" />
+  <Folder Name="/Tests/">
+    <Project Path="Tests/GolfStatsApp.Tests.csproj" />
+  </Folder>
   <Project Path="Client/GolfStatsApp.Client.csproj" />
   <Project Path="Shared/GolfStatsApp.Shared.csproj" />
 </Solution>

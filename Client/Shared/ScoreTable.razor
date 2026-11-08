@@ -1,0 +1,20 @@
+<table class="table table-sm table-striped stats-table mb-0">
+    <thead><tr><th>Golfer</th><th>Rounds</th><th class="text-end">Holes</th><th class="text-end">Bonus</th><th class="text-end">FedEx</th><th class="text-end">Total</th></tr></thead>
+    <tbody>
+    @foreach (var g in Golfers)
+    {
+        <tr>
+            <td>@g.Name @if (g.IsCaptain) { <span class="badge bg-warning text-dark ms-1">C ×2</span> }</td>
+            <td>@string.Join(", ", g.RoundsStarted.Select(r => $"R{r}"))</td>
+            <td class="text-end">@g.HolePoints.ToString("0.##")</td>
+            <td class="text-end">@g.BonusPoints.ToString("0.##")</td>
+            <td class="text-end">@g.FedExPoints.ToString("0.##")</td>
+            <td class="text-end"><strong>@g.Total.ToString("0.##")</strong></td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+@code {
+    [Parameter, EditorRequired] public List<GolferScoreDto> Golfers { get; set; } = new();
+}

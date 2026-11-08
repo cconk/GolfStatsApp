@@ -423,3 +423,9 @@ secrets.json
 
 # Python virtual environments
 .venv/
+
+# Local SQLite data
+Server/App_Data/
+*.db
+*.db-shm
+*.db-wal

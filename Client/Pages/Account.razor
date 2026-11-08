@@ -1,0 +1,112 @@
+@page "/account"
+@using GolfStatsApp.Client.Services
+@inject AuthState Auth
+@inject NavigationManager Nav
+
+<PageTitle>Account</PageTitle>
+<h1>Account</h1>
+
+@if (!Auth.IsLoaded)
+{
+    <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+}
+else if (Auth.User.IsAuthenticated)
+{
+    <div class="card" style="max-width: 28rem;">
+        <div class="card-body">
+            <h5 class="card-title">@Auth.User.DisplayName</h5>
+            <p class="card-text text-muted mb-1">@Auth.User.Email</p>
+            @if (Auth.User.IsAdmin)
+            {
+                <span class="badge text-bg-success mb-3">Administrator</span>
+            }
+            <div class="d-flex gap-2 mt-2">
+                <a class="btn btn-primary" href="leagues">My leagues</a>
+                <button class="btn btn-outline-secondary" @onclick="SignOut">Sign out</button>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card" style="max-width: 28rem;">
+        <div class="card-body">
+            <ul class="nav nav-pills mb-3">
+                <li class="nav-item"><button class="nav-link @(registerMode ? "" : "active")" @onclick="() => SetMode(false)">Sign in</button></li>
+                <li class="nav-item"><button class="nav-link @(registerMode ? "active" : "")" @onclick="() => SetMode(true)">Create account</button></li>
+            </ul>
+            <EditForm Model="form" OnValidSubmit="Submit">
+                <DataAnnotationsValidator />
+                @if (registerMode)
+                {
+                    <div class="mb-3">
+                        <label class="form-label" for="displayName">Display name</label>
+                        <InputText id="displayName" class="form-control" @bind-Value="form.DisplayName" autocomplete="nickname" />
+                    </div>
+                }
+                <div class="mb-3">
+                    <label class="form-label" for="email">Email</label>
+                    <InputText id="email" type="email" class="form-control" @bind-Value="form.Email" autocomplete="email" />
+                    <ValidationMessage For="() => form.Email" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="password">Password</label>
+                    <InputText id="password" type="password" class="form-control" @bind-Value="form.Password"
+                               autocomplete="@(registerMode ? "new-password" : "current-password")" />
+                    <ValidationMessage For="() => form.Password" />
+                    @if (registerMode)
+                    {
+                        <div class="form-text">At least 8 characters, with upper and lower case letters and a number.</div>
+                    }
+                </div>
+                @if (error is not null)
+                {
+                    <div class="alert alert-danger py-2">@error</div>
+                }
+                <button class="btn btn-success w-100" type="submit" disabled="@busy">
+                    @(registerMode ? "Create account" : "Sign in")
+                </button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private sealed class Form
+    {
+        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.EmailAddress]
+        public string Email { get; set; } = "";
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Password { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+    }
+
+    private readonly Form form = new();
+    private bool registerMode;
+    private bool busy;
+    private string? error;
+
+    protected override async Task OnInitializedAsync() => await Auth.EnsureLoadedAsync();
+
+    private void SetMode(bool register)
+    {
+        registerMode = register;
+        error = null;
+    }
+
+    private async Task Submit()
+    {
+        busy = true;
+        error = registerMode
+            ? await Auth.RegisterAsync(form.Email, form.Password, form.DisplayName)
+            : await Auth.LoginAsync(form.Email, form.Password);
+        busy = false;
+        if (error is null) form.Password = "";
+    }
+
+    private async Task SignOut()
+    {
+        await Auth.LogoutAsync();
+        Nav.NavigateTo("account");
+    }
+}
