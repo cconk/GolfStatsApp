@@ -42,6 +42,12 @@ namespace GolfStatsApp.Server.Services.Prediction
         /// <summary>Typical full-field size used to scale the cut line when only part of the field is modeled.</summary>
         public int DefaultFieldSize { get; set; } = 156;
 
+        /// <summary>SD of true per-round skill (strokes vs. field) across the generic players that fill out the field.</summary>
+        public double FieldSkillSd { get; set; } = 1.0;
+
+        /// <summary>Number of recent rounds generated for each generic field player.</summary>
+        public int FieldRecentRounds { get; set; } = 16;
+
         /// <summary>Default cut rule per event class (pga, major, signature, additional, playoff).</summary>
         public Dictionary<string, CutRule> CutRules { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 

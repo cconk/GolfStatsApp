@@ -44,6 +44,21 @@ public class MonteCarloEngineTests
     }
 
     [Fact]
+    public void SingleAverageGolfer_WithFieldFiller_HasRealisticOdds()
+    {
+        var options = new PredictiveModelingOptions();
+        var golfers = new List<GolferInputs> { new() { PlayerId = "solo", PlayerName = "Solo", Skill = 0, Sigma = 2.8 } };
+        golfers.AddRange(FieldFiller.Generate(155, 5, options));
+        Assert.Equal(156, golfers.Count);
+        Assert.Equal(155, golfers.Select(g => g.PlayerId).Distinct().Count(id => id.StartsWith(FieldFiller.IdPrefix)));
+
+        var r = Engine.Run(golfers, new EngineConfig { Simulations = 4_000, Seed = 3, CutTopN = 65 })[0];
+
+        Assert.InRange(r.PWin, 0, 0.05);
+        Assert.InRange(r.PMakeCut, 0.2, 0.8);
+    }
+
+    [Fact]
     public void Probabilities_SumToOne()
     {
         var results = Engine.Run(Field(156, 1), new EngineConfig { Simulations = 2_000, Seed = 7, CutTopN = 65 });

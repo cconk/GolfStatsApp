@@ -702,12 +702,8 @@ namespace GolfStatsApp.Server.Services.Prediction
 
             // --- engine config
             var cutN = tournament.CutTopN;
-            if (cutN.HasValue && summary.FieldSize > resolved.Count && resolved.Count > 1)
-            {
-                var scaled = (int)Math.Round(cutN.Value * (double)resolved.Count / summary.FieldSize);
-                warnings.Add($"Only {resolved.Count} of ~{summary.FieldSize} golfers modeled; cut line scaled to top {Math.Max(1, scaled)} of the modeled group and finish positions are relative to the modeled golfers.");
-                cutN = Math.Max(1, scaled);
-            }
+            if (summary.FieldSize > resolved.Count)
+                warnings.Add($"Only {resolved.Count} of ~{summary.FieldSize} golfers modeled; the remaining {summary.FieldSize - resolved.Count} spots are filled with generic field players.");
             result.Engine = new EngineConfig
             {
                 Simulations = request.Simulations,

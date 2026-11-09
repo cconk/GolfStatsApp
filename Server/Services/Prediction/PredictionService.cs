@@ -14,12 +14,14 @@ namespace GolfStatsApp.Server.Services.Prediction
     {
         private readonly ModelInputService _inputs;
         private readonly MonteCarloEngine _engine;
+        private readonly PredictiveModelingOptions _options;
         private readonly ILogger<PredictionService> _logger;
 
-        public PredictionService(ModelInputService inputs, MonteCarloEngine engine, ILogger<PredictionService> logger)
+        public PredictionService(ModelInputService inputs, MonteCarloEngine engine, PredictiveModelingOptions options, ILogger<PredictionService> logger)
         {
             _inputs = inputs;
             _engine = engine;
+            _options = options;
             _logger = logger;
         }
 
@@ -29,15 +31,18 @@ namespace GolfStatsApp.Server.Services.Prediction
             var build = await _inputs.BuildAsync(request, ct);
             var seed = request.Seed ?? Random.Shared.Next();
             build.Engine.Seed = seed;
+            var modeled = build.Golfers.Count;
+            var field = new List<GolferInputs>(build.Golfers);
+            field.AddRange(FieldFiller.Generate(build.Summary.FieldSize - modeled, seed, _options));
 
-            _logger.LogInformation("Prediction run start: {Golfers} golfers, {Sims} sims, tournament {TournamentId}",
-                build.Golfers.Count, build.Engine.Simulations, request.TournamentId);
+            _logger.LogInformation("Prediction run start: {Golfers} golfers ({Field} in field), {Sims} sims, tournament {TournamentId}",
+                modeled, field.Count, build.Engine.Simulations, request.TournamentId);
 
-            var results = await Task.Run(() => _engine.Run(build.Golfers, build.Engine, ct), ct);
+            var results = await Task.Run(() => _engine.Run(field, build.Engine, ct), ct);
             sw.Stop();
 
             _logger.LogInformation("Prediction run end: {Golfers} golfers, {Sims} sims, {Elapsed} ms",
-                build.Golfers.Count, build.Engine.Simulations, sw.ElapsedMilliseconds);
+                modeled, build.Engine.Simulations, sw.ElapsedMilliseconds);
 
             var response = new SimulateResponse
             {
