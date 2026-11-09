@@ -5,6 +5,11 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="Server/GolfStatsApp.Server.csproj" />
+  <Folder Name="/database/">
+    <File Path="database/01_create_database.sql" />
+    <File Path="database/02_create_tables.sql" />
+    <File Path="database/README.md" />
+  </Folder>
   <Folder Name="/Server/" />
   <Folder Name="/Shared/" />
   <Folder Name="/Tests/">

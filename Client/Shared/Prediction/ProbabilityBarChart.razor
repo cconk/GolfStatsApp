@@ -1,0 +1,30 @@
+@* App-owned chart wrapper: horizontal probability bars rendered with CSS so no JS charting dependency is required. *@
+<figure class="mb-3" aria-label="@Title">
+    <figcaption class="small fw-semibold mb-1">@Title</figcaption>
+    @if (Items.Count == 0)
+    {
+        <div class="small text-muted">No data.</div>
+    }
+    @foreach (var item in Items)
+    {
+        var pct = Max > 0 ? item.Value / Max * 100 : 0;
+        <div class="d-flex align-items-center mb-1 small">
+            <div class="text-truncate me-2" style="width:9rem" title="@item.Label">@item.Label</div>
+            <div class="flex-grow-1 bg-body-secondary rounded" style="height:0.9rem">
+                <div class="rounded @BarClass" style="height:100%; width:@pct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+            </div>
+            <div class="ms-2 text-end" style="width:3.5rem">@item.Value.ToString(Format)</div>
+        </div>
+    }
+</figure>
+
+@code {
+    public record BarItem(string Label, double Value);
+
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public List<BarItem> Items { get; set; } = new();
+    [Parameter] public string Format { get; set; } = "P1";
+    [Parameter] public string BarClass { get; set; } = "bg-success";
+
+    private double Max => Items.Count == 0 ? 0 : Items.Max(i => i.Value);
+}

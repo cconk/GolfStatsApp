@@ -1,0 +1,64 @@
+<div class="mb-3">
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="srcCurrent" @bind="Performance.CurrentTournament.Enabled" />
+        <label class="form-check-label" for="srcCurrent">Current tournament rounds</label>
+    </div>
+    @if (Performance.CurrentTournament.Enabled)
+    {
+        <WeightSlider Label="Current weight" Value="Performance.CurrentTournament.Weight ?? 40" ValueChanged="v => Performance.CurrentTournament.Weight = v" />
+    }
+</div>
+
+<div class="mb-3">
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="srcRecent" @bind="Performance.RecentForm.Enabled" />
+        <label class="form-check-label" for="srcRecent">Recent form (last N events)</label>
+    </div>
+    @if (Performance.RecentForm.Enabled)
+    {
+        <WeightSlider Label="Recent weight" Value="Performance.RecentForm.Weight ?? 40" ValueChanged="v => Performance.RecentForm.Weight = v" />
+        <div class="input-group input-group-sm mt-1" style="max-width:220px">
+            <span class="input-group-text">Last N</span>
+            <input type="number" class="form-control" min="@PredictionLimits.MinLastNEvents" max="@PredictionLimits.MaxLastNEvents"
+                   aria-label="Last N events" @bind="Performance.RecentForm.LastNEvents" />
+        </div>
+    }
+</div>
+
+<div class="mb-3">
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="srcHist" @bind="Performance.Historical.Enabled" />
+        <label class="form-check-label" for="srcHist">Historical seasons</label>
+    </div>
+    @if (Performance.Historical.Enabled)
+    {
+        <WeightSlider Label="Historical weight" Value="Performance.Historical.Weight ?? 20" ValueChanged="v => Performance.Historical.Weight = v" />
+        <div class="d-flex flex-wrap gap-2 mt-1">
+            @for (var y = DateTime.UtcNow.Year; y > DateTime.UtcNow.Year - PredictionLimits.MaxHistoricalSeasons; y--)
+            {
+                var year = y;
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="season-@year" checked="@Performance.Historical.Seasons.Contains(year)"
+                           @onchange="e => ToggleSeason(year, (bool)e.Value!)" />
+                    <label class="form-check-label" for="season-@year">@year</label>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<div class="mb-2">
+    <WeightSlider Label="Season stats vs. performance" Value="StatsWeight" ValueChanged="v => StatsWeightChanged.InvokeAsync(v)" Suffix="% stats" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PerformanceSelection Performance { get; set; } = new();
+    [Parameter] public double StatsWeight { get; set; } = 50;
+    [Parameter] public EventCallback<double> StatsWeightChanged { get; set; }
+
+    private void ToggleSeason(int year, bool on)
+    {
+        if (on && !Performance.Historical.Seasons.Contains(year)) Performance.Historical.Seasons.Add(year);
+        else if (!on) Performance.Historical.Seasons.Remove(year);
+    }
+}

@@ -1,0 +1,217 @@
+@if (States.Count == 0)
+{
+    <p class="text-muted small">Add golfers to choose the events used for each golfer.</p>
+}
+else
+{
+    <div class="row g-2 mb-2">
+        <div class="col-12 col-md-4">
+            <label class="form-label small" for="eventGolfer">Golfer</label>
+            <select id="eventGolfer" class="form-select form-select-sm" value="@current?.PlayerId" @onchange="OnGolferChanged">
+                @foreach (var s in States)
+                {
+                    <option value="@s.PlayerId">@s.PlayerName@(s.Customized ? $" ({s.Selected.Count} events)" : " (default)")</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label small" for="eventSeason">Season</label>
+            <select id="eventSeason" class="form-select form-select-sm" @bind="seasonFilter">
+                <option value="0">All</option>
+                @foreach (var y in (current?.Events ?? new()).Select(e => e.Season).Distinct().OrderByDescending(y => y))
+                {
+                    <option value="@y">@y</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label small" for="eventType">Type</label>
+            <select id="eventType" class="form-select form-select-sm" @bind="typeFilter">
+                <option value="">All</option>
+                @foreach (var t in (current?.Events ?? new()).Select(e => e.EventType).Distinct().OrderBy(t => t))
+                {
+                    <option value="@t">@t</option>
+                }
+            </select>
+        </div>
+        <div class="col-12 col-md-4">
+            <label class="form-label small" for="eventSearch">Search</label>
+            <input id="eventSearch" class="form-control form-control-sm" @bind="textFilter" @bind:event="oninput" placeholder="Event name" />
+        </div>
+    </div>
+
+    @if (current != null)
+    {
+        <div class="d-flex flex-wrap gap-1 mb-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="SelectAll">Select all (filtered)</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ClearSel">Clear</button>
+            <div class="input-group input-group-sm" style="width:auto">
+                <button type="button" class="btn btn-outline-secondary" @onclick="LastN">Last</button>
+                <input type="number" class="form-control" style="width:4.5rem" min="1" max="20" aria-label="Last N events" @bind="lastN" />
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="UseDefault">Use default sources</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" @onclick="ApplyToAll">Apply selection to all golfers</button>
+        </div>
+
+        @if (current.Loading)
+        {
+            <p class="text-muted small">Loading events…</p>
+        }
+        else if (current.Error != null)
+        {
+            <div class="alert alert-warning py-1 small">@current.Error</div>
+        }
+        else if (current.Events is { Count: 0 })
+        {
+            <div class="alert alert-warning py-1 small">No participated events found; this golfer will be modeled from stats only.</div>
+        }
+        else if (current.Events != null)
+        {
+            <div class="table-responsive" style="max-height:340px; overflow:auto">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="sticky-top">
+                        <tr>
+                            <th scope="col"><span class="visually-hidden">Use</span></th>
+                            <th scope="col">Event</th>
+                            <th scope="col">Season</th>
+                            <th scope="col" class="d-none d-md-table-cell">Date</th>
+                            <th scope="col" class="d-none d-md-table-cell">Type</th>
+                            <th scope="col">Pos</th>
+                            <th scope="col">To par</th>
+                            <th scope="col">Rounds</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in Visible)
+                        {
+                            var on = current.Selected.TryGetValue(e.TournamentId, out var rounds);
+                            var cid = $"ev-{current.PlayerId}-{e.TournamentId}";
+                            <tr>
+                                <td><input class="form-check-input" type="checkbox" id="@cid" checked="@on" @onchange="ev => ToggleEvent(e, (bool)ev.Value!)" aria-label="Use @e.Name" /></td>
+                                <td><label for="@cid">@e.Name</label></td>
+                                <td>@e.Season</td>
+                                <td class="d-none d-md-table-cell">@e.StartDate?.ToString("yyyy-MM-dd")</td>
+                                <td class="d-none d-md-table-cell">@e.EventType</td>
+                                <td>@(e.Status == "finished" ? e.Position : e.Status)</td>
+                                <td>@FormatToPar(e.TotalToPar)</td>
+                                <td>
+                                    @foreach (var r in e.Rounds)
+                                    {
+                                        var round = r.Round;
+                                        var rOn = on && (rounds!.Count == 0 || rounds.Contains(round));
+                                        <button type="button" class="btn btn-sm py-0 px-1 me-1 @(rOn ? "btn-success" : "btn-outline-secondary")"
+                                                disabled="@(!on)" aria-pressed="@rOn" title="R@(round): @FormatToPar(r.ToPar)"
+                                                @onclick="() => ToggleRound(e, round)">R@(round)</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="small text-muted mt-1">
+                @(current.Customized ? $"{current.Selected.Count} event(s) selected — overrides recent/historical sources for {current.PlayerName}." : "Default: last N events from the performance sources (pre-checked).")
+            </div>
+        }
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public List<GolferEventState> States { get; set; } = new();
+    [Parameter] public EventCallback<GolferEventState> LoadRequested { get; set; }
+    [Parameter] public int DefaultLastN { get; set; } = PredictionLimits.DefaultLastNEvents;
+
+    private GolferEventState? current;
+    private int seasonFilter;
+    private string typeFilter = string.Empty;
+    private string textFilter = string.Empty;
+    private int lastN = PredictionLimits.DefaultLastNEvents;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (current == null || !States.Contains(current))
+        {
+            current = States.FirstOrDefault();
+            await EnsureLoaded();
+        }
+    }
+
+    private IEnumerable<GolferEvent> Visible => (current?.Events ?? new())
+        .Where(e => seasonFilter == 0 || e.Season == seasonFilter)
+        .Where(e => typeFilter.Length == 0 || e.EventType == typeFilter)
+        .Where(e => textFilter.Length == 0 || e.Name.Contains(textFilter, StringComparison.OrdinalIgnoreCase));
+
+    private async Task OnGolferChanged(ChangeEventArgs e)
+    {
+        current = States.FirstOrDefault(s => s.PlayerId == e.Value?.ToString());
+        await EnsureLoaded();
+    }
+
+    private async Task EnsureLoaded()
+    {
+        if (current is { Events: null, Loading: false }) await LoadRequested.InvokeAsync(current);
+    }
+
+    private void Customize()
+    {
+        if (current != null) current.Customized = true;
+    }
+
+    private void ToggleEvent(GolferEvent e, bool on)
+    {
+        Customize();
+        if (on) current!.Selected[e.TournamentId] = new HashSet<int>();
+        else current!.Selected.Remove(e.TournamentId);
+    }
+
+    private void ToggleRound(GolferEvent e, int round)
+    {
+        if (!current!.Selected.TryGetValue(e.TournamentId, out var rounds)) return;
+        Customize();
+        if (rounds.Count == 0) foreach (var r in e.Rounds) rounds.Add(r.Round);
+        if (!rounds.Remove(round)) rounds.Add(round);
+        if (rounds.Count == 0) current.Selected.Remove(e.TournamentId);
+        else if (e.Rounds.All(r => rounds.Contains(r.Round))) rounds.Clear();
+    }
+
+    private void SelectAll()
+    {
+        Customize();
+        foreach (var e in Visible) current!.Selected.TryAdd(e.TournamentId, new HashSet<int>());
+    }
+
+    private void ClearSel()
+    {
+        Customize();
+        current!.Selected.Clear();
+    }
+
+    private void LastN()
+    {
+        Customize();
+        current!.SelectLastN(Math.Clamp(lastN, 1, 20));
+    }
+
+    private void UseDefault()
+    {
+        current!.Customized = false;
+        current.SelectLastN(DefaultLastN);
+    }
+
+    private async Task ApplyToAll()
+    {
+        if (current == null) return;
+        var source = current.Selected.ToDictionary(kv => kv.Key, kv => kv.Value);
+        foreach (var s in States.Where(s => s != current))
+        {
+            if (s.Events == null) await LoadRequested.InvokeAsync(s);
+            s.Customized = true;
+            s.Selected.Clear();
+            foreach (var e in s.Events ?? new())
+                if (source.TryGetValue(e.TournamentId, out var rounds))
+                    s.Selected[e.TournamentId] = new HashSet<int>(rounds.Where(r => e.Rounds.Any(x => x.Round == r)));
+        }
+    }
+
+    private static string FormatToPar(int? v) => v is null ? "–" : v == 0 ? "E" : v > 0 ? $"+{v}" : v.ToString()!;
+}

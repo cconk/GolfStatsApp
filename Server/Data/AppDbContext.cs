@@ -23,6 +23,9 @@ namespace GolfStatsApp.Server.Data
         public DbSet<SyncedTournament> SyncedTournaments => Set<SyncedTournament>();
         public DbSet<TournamentGolfer> TournamentGolfers => Set<TournamentGolfer>();
         public DbSet<GolferRound> GolferRounds => Set<GolferRound>();
+        public DbSet<StatSnapshot> StatSnapshots => Set<StatSnapshot>();
+        public DbSet<PlayerResultSnapshot> PlayerResultSnapshots => Set<PlayerResultSnapshot>();
+        public DbSet<PlayerResultRound> PlayerResultRounds => Set<PlayerResultRound>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -33,11 +36,17 @@ namespace GolfStatsApp.Server.Data
             builder.Entity<LeagueMember>().HasIndex(m => new { m.LeagueId, m.UserId }).IsUnique();
             builder.Entity<LeagueTournament>().HasIndex(t => new { t.LeagueId, t.TournamentId }).IsUnique();
             builder.Entity<TeamTournamentEntry>().HasIndex(e => new { e.LeagueTournamentId, e.MemberId }).IsUnique();
-            builder.Entity<TeamTournamentEntry>().HasOne(e => e.Member).WithMany().OnDelete(DeleteBehavior.Cascade);
+            // SQL Server disallows a second cascade path (League -> Members -> Entries and League -> Tournaments -> Entries).
+            builder.Entity<TeamTournamentEntry>().HasOne(e => e.Member).WithMany().OnDelete(DeleteBehavior.ClientCascade);
             builder.Entity<LineupSlot>().HasIndex(s => new { s.EntryId, s.FromRound });
             builder.Entity<SyncedTournament>().HasKey(t => t.TournamentId);
             builder.Entity<TournamentGolfer>().HasIndex(g => new { g.TournamentId, g.PlayerId }).IsUnique();
             builder.Entity<GolferRound>().HasIndex(r => new { r.TournamentId, r.PlayerId, r.Round }).IsUnique();
+            builder.Entity<StatSnapshot>().HasIndex(s => new { s.StatId, s.PlayerId, s.Season }).IsUnique();
+            builder.Entity<PlayerResultSnapshot>().HasIndex(s => new { s.PlayerId, s.TournamentId }).IsUnique();
+            builder.Entity<PlayerResultSnapshot>().HasMany(s => s.RoundScores).WithOne(r => r.Snapshot!)
+                .HasForeignKey(r => r.SnapshotId).OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<PlayerResultRound>().HasIndex(r => new { r.SnapshotId, r.Round }).IsUnique();
         }
     }
 
@@ -45,8 +54,16 @@ namespace GolfStatsApp.Server.Data
     {
         public static async Task InitializeAsync(AppDbContext db, string contentRoot)
         {
-            if (!await db.Database.EnsureCreatedAsync())
-                await UpgradeSchemaAsync(db);
+            if (db.Database.IsSqlite())
+            {
+                if (!await db.Database.EnsureCreatedAsync())
+                    await UpgradeSchemaAsync(db);
+            }
+            else if (!await db.Database.CanConnectAsync())
+            {
+                throw new InvalidOperationException(
+                    "Cannot connect to the SQL Server database. Run the scripts in the /database folder (see database/README.md) and check ConnectionStrings:Default.");
+            }
 
             if (await db.Teams.AnyAsync()) return;
 

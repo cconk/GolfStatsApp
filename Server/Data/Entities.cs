@@ -112,4 +112,44 @@ namespace GolfStatsApp.Server.Data
         public string Tournament { get; set; } = string.Empty;
         public double Points { get; set; }
     }
+
+    /// <summary>Persisted season stat value captured from the PGA Tour API (fallback tier for predictive modeling).</summary>
+    public class StatSnapshot
+    {
+        public int Id { get; set; }
+        public string StatId { get; set; } = string.Empty;
+        public string PlayerId { get; set; } = string.Empty;
+        public string PlayerName { get; set; } = string.Empty;
+        public int Season { get; set; }
+        public double Value { get; set; }
+        public int? Rank { get; set; }
+        public DateTime CapturedUtc { get; set; }
+    }
+
+    /// <summary>Persisted tournament result for a player (recent/historical performance source).</summary>
+    public class PlayerResultSnapshot
+    {
+        public int Id { get; set; }
+        public string PlayerId { get; set; } = string.Empty;
+        public string TournamentId { get; set; } = string.Empty;
+        public string TournamentName { get; set; } = string.Empty;
+        public int Season { get; set; }
+        public DateTime? EndDate { get; set; }
+        public string EventType { get; set; } = "pga";
+        public string? Position { get; set; }
+        public string Status { get; set; } = "finished";
+        public int? ToPar { get; set; }
+        public int Rounds { get; set; }
+        public DateTime CapturedUtc { get; set; }
+        public List<PlayerResultRound> RoundScores { get; set; } = new();
+    }
+
+    public class PlayerResultRound
+    {
+        public int Id { get; set; }
+        public int SnapshotId { get; set; }
+        public PlayerResultSnapshot? Snapshot { get; set; }
+        public int Round { get; set; }
+        public int ToPar { get; set; }
+    }
 }

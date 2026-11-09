@@ -12,6 +12,7 @@ using Microsoft.Extensions.Hosting;
 using GolfStatsApp.Server.Data;
 using GolfStatsApp.Server.Services;
 using GolfStatsApp.Server.PgaTour;
+using GolfStatsApp.Server.Services.Prediction;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,18 +24,47 @@ builder.Services.AddScoped<GolfSimulationService>();
 builder.Services.AddScoped<PlayerDataService>();
 builder.Services.AddPgaTourClient(builder.Configuration);
 builder.Services.AddScoped<TournamentSyncService>();
+var predictionOptions = builder.Configuration.GetSection(PredictiveModelingOptions.SectionName).Get<PredictiveModelingOptions>() ?? new PredictiveModelingOptions();
+builder.Services.AddSingleton(predictionOptions);
+builder.Services.AddSingleton<CutRuleResolver>();
+builder.Services.AddSingleton<MonteCarloEngine>();
+builder.Services.AddSingleton<SimulationConcurrencyLimiter>();
+builder.Services.AddSingleton<IPgaDataSource, PgaTourDataSource>();
+builder.Services.AddScoped<IFallbackPlayerSource, PlayerDataFallbackSource>();
+builder.Services.AddScoped<GolferSearchService>();
+builder.Services.AddScoped<ModelInputService>();
+builder.Services.AddScoped<PredictionService>();
 if (!builder.Environment.IsEnvironment("Testing"))
     builder.Services.AddHostedService<TournamentSyncBackgroundService>();
 
-var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=App_Data/golfstats.db";
-const string sqlitePrefix = "Data Source=";
-if (connectionString.StartsWith(sqlitePrefix, StringComparison.OrdinalIgnoreCase))
+// \"SqlServer\" (default) or \"Sqlite\" (used by the test suite). Read at resolve time so test overrides apply.
+builder.Services.AddDbContext<AppDbContext>((sp, o) =>
 {
-    var dbPath = Path.GetFullPath(connectionString[sqlitePrefix.Length..], builder.Environment.ContentRootPath);
-    Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
-    connectionString = sqlitePrefix + dbPath;
-}
-builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlite(connectionString));
+    var config = sp.GetRequiredService<IConfiguration>();
+    var env = sp.GetRequiredService<IWebHostEnvironment>();
+    var connectionString = config.GetConnectionString("Default")
+        ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
+    if ((config["DatabaseProvider"] ?? "SqlServer").Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
+    {
+        const string sqlitePrefix = "Data Source=";
+        if (connectionString.StartsWith(sqlitePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            var dbPath = Path.GetFullPath(connectionString[sqlitePrefix.Length..], env.ContentRootPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+            connectionString = sqlitePrefix + dbPath;
+        }
+        o.UseSqlite(connectionString);
+    }
+    else
+    {
+        o.UseSqlServer(connectionString, sql =>
+        {
+            sql.EnableRetryOnFailure(3);
+            sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+        });
+    }
+});
+builder.Services.AddResponseCompression(o => o.EnableForHttps = true);
 
 builder.Services.AddIdentityCore<AppUser>(o =>
     {
@@ -75,7 +105,11 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-    app.UseWebAssemblyDebugging();
+    // Blazor WASM debugging proxy is opt-in (set "EnableWasmDebugging": "true", e.g. via the
+    // "Blazor WASM debugging" launch profile). When enabled, Visual Studio attaches the Managed Wasm Debugger,
+    // which can fail with "fatal error loading the metadata for System.Private.CoreLib.dll".
+    if (app.Configuration.GetValue<bool>("EnableWasmDebugging"))
+        app.UseWebAssemblyDebugging();
 }
 else
 {
@@ -84,6 +118,7 @@ else
     app.UseHsts();
 }
 
+app.UseResponseCompression();
 app.UseHttpsRedirection();
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();

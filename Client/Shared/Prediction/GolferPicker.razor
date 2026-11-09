@@ -1,0 +1,127 @@
+@using GolfStatsApp.Client.Services
+@inject PredictionApi Api
+@implements IDisposable
+
+<div class="mb-2 position-relative">
+    <label for="golferSearch" class="form-label">Search golfers by name or player ID</label>
+    <input id="golferSearch" class="form-control" placeholder="e.g. Scheffler or 46046" autocomplete="off"
+           role="combobox" aria-expanded="@(results.Count > 0)" aria-controls="golferSearchResults"
+           value="@query" @oninput="OnInput" @onkeydown="OnKeyDown" />
+    @if (searching)
+    {
+        <div class="form-text">Searching…</div>
+    }
+    @if (error != null)
+    {
+        <div class="form-text text-danger">@error</div>
+    }
+    @if (results.Count > 0)
+    {
+        <ul id="golferSearchResults" class="list-group position-absolute w-100 shadow-sm" style="z-index:10; max-height:300px; overflow:auto" role="listbox">
+            @for (var i = 0; i < results.Count; i++)
+            {
+                var r = results[i];
+                var active = i == highlighted;
+                var already = Selected.Any(s => s.PlayerId == r.PlayerId);
+                <li class="list-group-item list-group-item-action d-flex justify-content-between @(active ? "active" : "") @(already ? "disabled" : "")"
+                    role="option" aria-selected="@active" @onclick="() => Add(r)" style="cursor:pointer">
+                    <span>@r.PlayerName</span>
+                    <small>ID @r.PlayerId@(r.Rank is > 0 ? $" · #{r.Rank}" : "")</small>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+    <span class="small text-muted">@Selected.Count / @PredictionLimits.MaxGolfers selected</span>
+    @if (Selected.Count > 0)
+    {
+        <button type="button" class="btn btn-sm btn-link" @onclick="Clear">Clear all</button>
+    }
+</div>
+
+@if (Selected.Count > 0)
+{
+    <ul class="list-group list-group-flush" style="max-height:260px; overflow:auto">
+        @foreach (var g in Selected)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center px-1">
+                <span>@g.PlayerName <small class="text-muted">ID @g.PlayerId@(g.Rank is > 0 ? $" · #{g.Rank}" : "")</small></span>
+                <button type="button" class="btn btn-sm btn-outline-danger" aria-label="Remove @g.PlayerName" @onclick="() => Remove(g)">×</button>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter, EditorRequired] public List<GolferSearchResult> Selected { get; set; } = new();
+    [Parameter] public EventCallback SelectionChanged { get; set; }
+
+    private string query = string.Empty;
+    private List<GolferSearchResult> results = new();
+    private bool searching;
+    private string? error;
+    private int highlighted = -1;
+    private CancellationTokenSource? cts;
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        query = e.Value?.ToString() ?? string.Empty;
+        cts?.Cancel();
+        cts = new CancellationTokenSource();
+        var token = cts.Token;
+        error = null;
+        var q = query.Trim();
+        if (q.Length < 2 && !(q.Length > 0 && q.All(char.IsDigit)))
+        {
+            results = new();
+            return;
+        }
+        try
+        {
+            await Task.Delay(250, token);
+            searching = true;
+            results = await Api.SearchGolfersAsync(q, 25, token);
+            highlighted = results.Count > 0 ? 0 : -1;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { error = ex.Message; results = new(); }
+        finally { if (!token.IsCancellationRequested) searching = false; }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (results.Count == 0) return;
+        switch (e.Key)
+        {
+            case "ArrowDown": highlighted = Math.Min(results.Count - 1, highlighted + 1); break;
+            case "ArrowUp": highlighted = Math.Max(0, highlighted - 1); break;
+            case "Enter" when highlighted >= 0: await Add(results[highlighted]); break;
+            case "Escape": results = new(); break;
+        }
+    }
+
+    private async Task Add(GolferSearchResult r)
+    {
+        if (Selected.Any(s => s.PlayerId == r.PlayerId) || Selected.Count >= PredictionLimits.MaxGolfers) return;
+        Selected.Add(r);
+        query = string.Empty;
+        results = new();
+        await SelectionChanged.InvokeAsync();
+    }
+
+    private async Task Remove(GolferSearchResult r)
+    {
+        Selected.Remove(r);
+        await SelectionChanged.InvokeAsync();
+    }
+
+    private async Task Clear()
+    {
+        Selected.Clear();
+        await SelectionChanged.InvokeAsync();
+    }
+
+    public void Dispose() => cts?.Cancel();
+}

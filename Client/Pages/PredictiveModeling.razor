@@ -1,0 +1,306 @@
+@page "/predictive-modeling"
+@using GolfStatsApp.Client.Services
+@using GolfStatsApp.Client.Shared.Prediction
+@inject PredictionApi Api
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>Predictive Modeling</PageTitle>
+
+<h1>Predictive Modeling</h1>
+<p class="text-muted">Monte Carlo simulation of golfer outcomes from season stats and tournament performances. Results are estimates.</p>
+
+@if (loadError != null)
+{
+    <div class="alert alert-danger">@loadError</div>
+}
+
+<div class="row g-4">
+    <div class="col-12 col-xl-5">
+        <div class="card mb-3">
+            <div class="card-header"><h2 class="h5 mb-0">1. Tournament &amp; simulation</h2></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="tournament" class="form-label">Target tournament</label>
+                    <select id="tournament" class="form-select" value="@request.TournamentId" @onchange="OnTournamentChanged">
+                        <option value="">Select a tournament</option>
+                        @foreach (var t in tournaments)
+                        {
+                            <option value="@t.TournamentId" disabled="@(!t.Supported)">
+                                @t.Name@(t.StartDate is { } d ? $" — {d:MMM d}" : "") (@t.EventType@(t.HasCut ? $", cut top {t.CutTopN}" : ", no cut"))@(t.Supported ? "" : " — not supported")
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="sims" class="form-label">Simulations (@PredictionLimits.MinSimulations–@PredictionLimits.MaxSimulations.ToString("N0"))</label>
+                    <div class="row g-2 align-items-center">
+                        <div class="col-8">
+                            <input type="range" class="form-range" min="@PredictionLimits.MinSimulations" max="@PredictionLimits.MaxSimulations" step="1"
+                                   aria-label="Simulations slider" @bind="request.Simulations" @bind:event="oninput" />
+                        </div>
+                        <div class="col-4">
+                            <input id="sims" type="number" class="form-control @(SimsValid ? "" : "is-invalid")" min="@PredictionLimits.MinSimulations" max="@PredictionLimits.MaxSimulations"
+                                   @bind="request.Simulations" @bind:event="oninput" />
+                        </div>
+                    </div>
+                    @if (!SimsValid)
+                    {
+                        <div class="text-danger small">Simulations must be between @PredictionLimits.MinSimulations and @PredictionLimits.MaxSimulations.ToString("N0").</div>
+                    }
+                </div>
+                <div class="mb-1">
+                    <label for="seed" class="form-label">Random seed (optional, for reproducible runs)</label>
+                    <input id="seed" type="number" class="form-control" @bind="request.Seed" placeholder="Random" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="h5 mb-0">2. Golfers</h2>
+                <button type="button" class="btn btn-sm btn-outline-primary" disabled="@(string.IsNullOrEmpty(request.TournamentId) || loadingField)" @onclick="LoadField">
+                    @(loadingField ? "Loading…" : "Load tournament field")
+                </button>
+            </div>
+            <div class="card-body">
+                <GolferPicker Selected="golfers" SelectionChanged="SyncEventStates" />
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header"><h2 class="h5 mb-0">3. Season stats</h2></div>
+            <div class="card-body">
+                <StatPicker Catalog="stats" Selected="request.Stats" />
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header"><h2 class="h5 mb-0">4. Performance sources</h2></div>
+            <div class="card-body">
+                <PerformancePicker Performance="request.Performance" @bind-StatsWeight="request.StatsWeight" />
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-7">
+        <div class="card mb-3">
+            <div class="card-header"><h2 class="h5 mb-0">5. Per-golfer events (optional)</h2></div>
+            <div class="card-body">
+                <GolferEventPicker States="eventStates" LoadRequested="LoadEvents" DefaultLastN="request.Performance.RecentForm.LastNEvents" />
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center mb-3">
+            <button type="button" class="btn btn-success" disabled="@(!CanRun)" @onclick="Run">
+                @if (running)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    <span>Running…</span>
+                }
+                else
+                {
+                    <span>Run simulation</span>
+                }
+            </button>
+            @if (running)
+            {
+                <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancel</button>
+            }
+            @if (!CanRun && !running)
+            {
+                <span class="small text-muted">@RunHint</span>
+            }
+        </div>
+
+        @if (runError != null)
+        {
+            <div class="alert alert-danger" role="alert">@runError</div>
+        }
+
+        @if (result != null)
+        {
+            <div class="card mb-3">
+                <div class="card-header"><h2 class="h5 mb-0">Results</h2></div>
+                <div class="card-body">
+                    <ResultsView Result="result" OnExport="Export" Exporting="exporting" />
+                </div>
+            </div>
+            <div class="card mb-3">
+                <div class="card-header"><h2 class="h5 mb-0">Inputs used</h2></div>
+                <div class="card-body">
+                    <InputsSummaryPanel Summary="result.InputsSummary" />
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly SimulateRequest request = new()
+    {
+        Simulations = PredictionLimits.DefaultSimulations,
+        Performance = new PerformanceSelection
+        {
+            CurrentTournament = new SourceToggle { Enabled = true, Weight = 40 },
+            RecentForm = new RecentFormSource { Enabled = true, Weight = 40, LastNEvents = PredictionLimits.DefaultLastNEvents },
+            Historical = new HistoricalSource { Enabled = false, Weight = 20 },
+        },
+    };
+
+    private readonly List<GolferSearchResult> golfers = new();
+    private readonly List<GolferEventState> eventStates = new();
+    private List<PredictionStatInfo>? stats;
+    private List<PredictionTournament> tournaments = new();
+    private SimulateResponse? result;
+    private string? loadError;
+    private string? runError;
+    private bool running;
+    private bool exporting;
+    private bool loadingField;
+    private CancellationTokenSource? runCts;
+
+    private bool SimsValid => request.Simulations >= PredictionLimits.MinSimulations && request.Simulations <= PredictionLimits.MaxSimulations;
+    private bool HasInputs => request.Stats.Count > 0 || request.Performance.CurrentTournament.Enabled || request.Performance.RecentForm.Enabled
+        || request.Performance.Historical.Enabled || eventStates.Any(s => s.Customized);
+    private bool CanRun => !running && SimsValid && golfers.Count is >= PredictionLimits.MinGolfers and <= PredictionLimits.MaxGolfers
+        && !string.IsNullOrEmpty(request.TournamentId) && HasInputs;
+
+    private string RunHint =>
+        string.IsNullOrEmpty(request.TournamentId) ? "Select a tournament." :
+        golfers.Count == 0 ? "Add at least one golfer." :
+        !SimsValid ? "Fix the simulation count." :
+        !HasInputs ? "Select at least one stat or performance source." : string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var year = DateTime.UtcNow.Year;
+            var statsTask = Api.GetStatsAsync();
+            var tournamentsTask = Api.GetTournamentsAsync("upcoming", year);
+            stats = await statsTask;
+            tournaments = await tournamentsTask;
+
+            var defaults = new[] { "02675", "02567", "02568", "02564" };
+            foreach (var id in defaults.Where(id => stats.Any(s => s.StatId == id && s.Supported)))
+                request.Stats.Add(new StatSelection { StatId = id, Weight = 50 });
+            request.TournamentId = tournaments.FirstOrDefault(t => t.Supported)?.TournamentId ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            loadError = $"Could not load predictive modeling data: {ex.Message}";
+            stats ??= new();
+        }
+    }
+
+    private void OnTournamentChanged(ChangeEventArgs e) => request.TournamentId = e.Value?.ToString() ?? string.Empty;
+
+    private async Task LoadField()
+    {
+        loadingField = true;
+        runError = null;
+        try
+        {
+            var field = await Api.GetFieldAsync(request.TournamentId);
+            foreach (var p in field.Where(p => !p.Alternate && p.Withdrawn != true && !string.IsNullOrEmpty(p.PlayerId)))
+            {
+                if (golfers.Count >= PredictionLimits.MaxGolfers) break;
+                if (golfers.All(g => g.PlayerId != p.PlayerId))
+                    golfers.Add(new GolferSearchResult { PlayerId = p.PlayerId!, PlayerName = p.DisplayName ?? p.PlayerId! });
+            }
+            SyncEventStates();
+        }
+        catch (Exception ex)
+        {
+            runError = $"Could not load the tournament field: {ex.Message}";
+        }
+        finally
+        {
+            loadingField = false;
+        }
+    }
+
+    private void SyncEventStates()
+    {
+        eventStates.RemoveAll(s => golfers.All(g => g.PlayerId != s.PlayerId));
+        foreach (var g in golfers.Where(g => eventStates.All(s => s.PlayerId != g.PlayerId)))
+            eventStates.Add(new GolferEventState { PlayerId = g.PlayerId, PlayerName = g.PlayerName });
+    }
+
+    private async Task LoadEvents(GolferEventState state)
+    {
+        state.Loading = true;
+        state.Error = null;
+        StateHasChanged();
+        try
+        {
+            var to = DateTime.UtcNow.Year;
+            state.Events = await Api.GetGolferEventsAsync(state.PlayerId, to - 1, to);
+            if (!state.Customized) state.SelectLastN(request.Performance.RecentForm.LastNEvents);
+        }
+        catch (Exception ex)
+        {
+            state.Error = ex.Message;
+            state.Events = new();
+        }
+        finally
+        {
+            state.Loading = false;
+        }
+    }
+
+    private async Task Run()
+    {
+        runError = null;
+        running = true;
+        runCts = new CancellationTokenSource();
+        try
+        {
+            request.Golfers = golfers.Select(g => new GolferSelection
+            {
+                PlayerId = g.PlayerId,
+                PlayerName = g.PlayerName,
+                Events = eventStates.FirstOrDefault(s => s.PlayerId == g.PlayerId)?.ToRequest(),
+            }).ToList();
+            result = await Api.SimulateAsync(request, runCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            runError = "Simulation cancelled.";
+        }
+        catch (Exception ex)
+        {
+            runError = ex.Message;
+        }
+        finally
+        {
+            running = false;
+            runCts?.Dispose();
+            runCts = null;
+        }
+    }
+
+    private void Cancel() => runCts?.Cancel();
+
+    private async Task Export(string format)
+    {
+        if (result == null) return;
+        exporting = true;
+        try
+        {
+            var (bytes, type, name) = await Api.ExportAsync(result, format);
+            await JS.InvokeVoidAsync("golfDownload", name, type, Convert.ToBase64String(bytes));
+        }
+        catch (Exception ex)
+        {
+            runError = $"Export failed: {ex.Message}";
+        }
+        finally
+        {
+            exporting = false;
+        }
+    }
+
+    public void Dispose() => runCts?.Cancel();
+}

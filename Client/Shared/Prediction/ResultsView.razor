@@ -1,0 +1,124 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+    <div class="small text-muted">
+        @Result.SimulationsRun.ToString("N0") simulations · @Result.GolfersModeled golfers · @Result.ElapsedMs ms · seed @Result.Seed
+        · generated @Result.GeneratedUtc.ToLocalTime().ToString("g")
+    </div>
+    <div class="btn-group btn-group-sm">
+        <button type="button" class="btn btn-outline-success" disabled="@Exporting" @onclick='() => OnExport.InvokeAsync("csv")'>Export CSV</button>
+        <button type="button" class="btn btn-outline-success" disabled="@Exporting" @onclick='() => OnExport.InvokeAsync("xlsx")'>Export Excel</button>
+    </div>
+</div>
+<p class="small text-muted">All figures are model <strong>estimates</strong> from Monte Carlo simulation, not guarantees.</p>
+
+<div class="table-responsive mb-3">
+    <table class="table table-sm table-striped table-hover align-middle">
+        <thead>
+            <tr>
+                @foreach (var col in Columns)
+                {
+                    <th scope="col" class="text-nowrap" aria-sort="@(sortKey == col.Key ? (sortDesc ? "descending" : "ascending") : "none")">
+                        <button type="button" class="btn btn-link btn-sm p-0 text-reset text-decoration-none fw-semibold" @onclick="() => Sort(col.Key)">
+                            @col.Label @(sortKey == col.Key ? (sortDesc ? "▼" : "▲") : "")
+                        </button>
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var g in Sorted)
+            {
+                <tr class="@(selected == g ? "table-active" : "")" @onclick="() => selected = g" style="cursor:pointer">
+                    <td>
+                        @g.PlayerName
+                        @if (g.Warnings.Count > 0)
+                        {
+                            <span class="badge text-bg-warning ms-1" title="@string.Join("\n", g.Warnings)">!</span>
+                        }
+                    </td>
+                    <td>@g.PWin.ToString("P1")</td>
+                    <td>@g.PTop5.ToString("P1")</td>
+                    <td>@g.PTop10.ToString("P1")</td>
+                    <td>@g.PTop20.ToString("P1")</td>
+                    @if (Result.InputsSummary.HasCut)
+                    {
+                        <td>@g.PMakeCut.ToString("P1")</td>
+                    }
+                    <td>@g.MeanFinish.ToString("0.0")</td>
+                    <td>@ToPar(g.MeanScoreToPar)</td>
+                    <td class="text-nowrap">@ToPar(g.P10) / @ToPar(g.P50) / @ToPar(g.P90)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="row g-3">
+    <div class="col-12 col-lg-6">
+        <ProbabilityBarChart Title="Win probability (top 15)" Items="@Top(g => g.PWin)" />
+    </div>
+    <div class="col-12 col-lg-6">
+        <ProbabilityBarChart Title="Top-10 probability (top 15)" Items="@Top(g => g.PTop10)" BarClass="bg-primary" />
+    </div>
+    <div class="col-12 col-lg-6">
+        @if ((selected ?? Sorted.FirstOrDefault()) is { } focus)
+        {
+            <FinishHistogramChart Golfer="focus" />
+            <p class="small text-muted">Click a row to view that golfer's distribution.</p>
+        }
+    </div>
+    <div class="col-12 col-lg-6">
+        <ScoreRangeChart Golfers="@Sorted.Take(15).ToList()" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SimulateResponse Result { get; set; } = new();
+    [Parameter] public EventCallback<string> OnExport { get; set; }
+    [Parameter] public bool Exporting { get; set; }
+
+    private string sortKey = "win";
+    private bool sortDesc = true;
+    private GolferPrediction? selected;
+
+    private record Column(string Key, string Label, Func<GolferPrediction, object> Selector);
+
+    private IEnumerable<Column> Columns
+    {
+        get
+        {
+            yield return new("name", "Golfer", g => g.PlayerName);
+            yield return new("win", "Win", g => g.PWin);
+            yield return new("top5", "Top 5", g => g.PTop5);
+            yield return new("top10", "Top 10", g => g.PTop10);
+            yield return new("top20", "Top 20", g => g.PTop20);
+            if (Result.InputsSummary.HasCut) yield return new("cut", "Make cut", g => g.PMakeCut);
+            yield return new("finish", "Avg finish", g => g.MeanFinish);
+            yield return new("score", "Avg to par", g => g.MeanScoreToPar);
+            yield return new("range", "P10 / P50 / P90", g => g.P50);
+        }
+    }
+
+    private IEnumerable<GolferPrediction> Sorted
+    {
+        get
+        {
+            var col = Columns.First(c => c.Key == sortKey);
+            return sortDesc ? Result.Golfers.OrderByDescending(col.Selector) : Result.Golfers.OrderBy(col.Selector);
+        }
+    }
+
+    private void Sort(string key)
+    {
+        if (sortKey == key) sortDesc = !sortDesc;
+        else
+        {
+            sortKey = key;
+            sortDesc = key is not ("name" or "finish" or "score" or "range");
+        }
+    }
+
+    private List<ProbabilityBarChart.BarItem> Top(Func<GolferPrediction, double> f) =>
+        Result.Golfers.OrderByDescending(f).Take(15).Select(g => new ProbabilityBarChart.BarItem(g.PlayerName, f(g))).ToList();
+
+    private static string ToPar(double v) => Math.Abs(v) < 0.05 ? "E" : v > 0 ? $"+{v:0.#}" : v.ToString("0.#");
+}

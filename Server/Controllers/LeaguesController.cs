@@ -91,6 +91,7 @@ namespace GolfStatsApp.Server.Controllers
 		{
 			var league = await _db.Leagues.FindAsync(id);
 			if (league is null || league.OwnerId != UserId) return NotFound();
+			await _db.TeamTournamentEntries.Where(e => e.Member!.LeagueId == id).ExecuteDeleteAsync();
 			_db.Leagues.Remove(league);
 			await _db.SaveChangesAsync();
 			return NoContent();

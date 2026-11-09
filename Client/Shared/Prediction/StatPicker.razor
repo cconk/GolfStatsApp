@@ -1,0 +1,77 @@
+@if (Catalog == null)
+{
+    <p class="text-muted">Loading stats…</p>
+}
+else
+{
+    <input class="form-control form-control-sm mb-2" placeholder="Search stats" aria-label="Search stats" @bind="filter" @bind:event="oninput" />
+    <div class="form-check form-switch mb-2">
+        <input class="form-check-input" type="checkbox" id="supportedOnly" @bind="supportedOnly" />
+        <label class="form-check-label small" for="supportedOnly">Show model-supported stats only</label>
+    </div>
+    <div style="max-height:260px; overflow:auto" class="border rounded p-2 mb-2">
+        @foreach (var group in Filtered.GroupBy(s => s.Category))
+        {
+            <div class="fw-semibold small text-uppercase text-muted mt-1">@group.Key</div>
+            @foreach (var s in group)
+            {
+                var id = $"stat-{s.StatId}";
+                var isSelected = Selected.Any(x => x.StatId == s.StatId);
+                var atCap = !isSelected && Selected.Count >= PredictionLimits.MaxStats;
+                <div class="form-check" title="@(s.Supported ? s.Role : "Not supported by the v1 model")">
+                    <input class="form-check-input" type="checkbox" id="@id" checked="@isSelected" disabled="@(!s.Supported || atCap)"
+                           @onchange="e => Toggle(s, (bool)e.Value!)" />
+                    <label class="form-check-label @(s.Supported ? "" : "text-muted")" for="@id">@s.Name</label>
+                </div>
+            }
+        }
+    </div>
+
+    @if (Selected.Count > 0)
+    {
+        <div class="small text-muted mb-1">Weights (normalized to 100%)</div>
+        @foreach (var s in Selected)
+        {
+            var info = Catalog.FirstOrDefault(c => c.StatId == s.StatId);
+            <div class="row g-2 align-items-center mb-1">
+                <div class="col-6 small">@(info?.Name ?? s.StatId)</div>
+                <div class="col-4">
+                    <input type="range" class="form-range" min="0" max="100" aria-label="Weight for @(info?.Name)"
+                           value="@(s.Weight ?? 50)" @oninput="e => SetWeight(s, e.Value)" />
+                </div>
+                <div class="col-2 small text-end">@Percent(s)%</div>
+            </div>
+        }
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public List<PredictionStatInfo>? Catalog { get; set; }
+    [Parameter, EditorRequired] public List<StatSelection> Selected { get; set; } = new();
+
+    private string filter = string.Empty;
+    private bool supportedOnly = true;
+
+    private IEnumerable<PredictionStatInfo> Filtered => (Catalog ?? new())
+        .Where(s => !supportedOnly || s.Supported)
+        .Where(s => filter.Length == 0 || s.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) || s.Category.Contains(filter, StringComparison.OrdinalIgnoreCase));
+
+    private void Toggle(PredictionStatInfo s, bool on)
+    {
+        if (on && Selected.Count < PredictionLimits.MaxStats && Selected.All(x => x.StatId != s.StatId))
+            Selected.Add(new StatSelection { StatId = s.StatId, Weight = 50 });
+        else if (!on)
+            Selected.RemoveAll(x => x.StatId == s.StatId);
+    }
+
+    private void SetWeight(StatSelection s, object? value)
+    {
+        if (double.TryParse(value?.ToString(), out var w)) s.Weight = Math.Clamp(w, 0, 100);
+    }
+
+    private string Percent(StatSelection s)
+    {
+        var total = Selected.Sum(x => x.Weight ?? 50);
+        return total <= 0 ? (100.0 / Selected.Count).ToString("0") : ((s.Weight ?? 50) / total * 100).ToString("0");
+    }
+}

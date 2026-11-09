@@ -1,0 +1,28 @@
+@* App-owned chart wrapper: P10–P90 score ranges with median marker. *@
+<figure class="mb-3" aria-label="Score distribution ranges">
+    <figcaption class="small fw-semibold mb-1">Score to par — P10 to P90 range, median marked (estimate)</figcaption>
+    @foreach (var g in Golfers)
+    {
+        <div class="d-flex align-items-center mb-1 small">
+            <div class="text-truncate me-2" style="width:9rem" title="@g.PlayerName">@g.PlayerName</div>
+            <div class="flex-grow-1 position-relative bg-body-secondary rounded" style="height:0.9rem">
+                <div class="position-absolute bg-info rounded" style="left:@Pos(g.P10)%; width:@Width(g.P10, g.P90)%; height:100%"></div>
+                <div class="position-absolute bg-dark" style="left:@Pos(g.P50)%; width:2px; height:100%"></div>
+            </div>
+            <div class="ms-2 text-end" style="width:6.5rem">@g.P10 / @g.P50 / @g.P90</div>
+        </div>
+    }
+    <div class="d-flex justify-content-between small text-muted" style="margin-left:9.5rem; margin-right:7rem">
+        <span>@Min</span><span>@MaxV</span>
+    </div>
+</figure>
+
+@code {
+    [Parameter, EditorRequired] public List<GolferPrediction> Golfers { get; set; } = new();
+
+    private double Min => Golfers.Count == 0 ? 0 : Math.Floor(Golfers.Min(g => g.P10)) - 1;
+    private double MaxV => Golfers.Count == 0 ? 1 : Math.Ceiling(Golfers.Max(g => g.P90)) + 1;
+
+    private string Pos(double v) => ((v - Min) / Math.Max(1, MaxV - Min) * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+    private string Width(double a, double b) => (Math.Max(0.5, (b - a) / Math.Max(1, MaxV - Min) * 100)).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+}

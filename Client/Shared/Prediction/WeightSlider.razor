@@ -1,0 +1,25 @@
+<div class="row g-2 align-items-center">
+    <label class="col-5 small col-form-label" for="@id">@Label</label>
+    <div class="col-5">
+        <input id="@id" type="range" class="form-range" min="0" max="100" value="@Value" @oninput="OnInput" />
+    </div>
+    <div class="col-2 small text-end">@Value.ToString("0")@Suffix</div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public double Value { get; set; }
+    [Parameter] public EventCallback<double> ValueChanged { get; set; }
+    [Parameter] public string Suffix { get; set; } = string.Empty;
+
+    private readonly string id = $"w-{Guid.NewGuid():N}";
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out var v))
+        {
+            Value = v;
+            await ValueChanged.InvokeAsync(v);
+        }
+    }
+}

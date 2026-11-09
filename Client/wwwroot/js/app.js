@@ -9,3 +9,12 @@ window.golfTheme = {
         if (meta) meta.setAttribute('content', theme === 'dark' ? '#0f1a15' : '#0b5d3b');
     }
 };
+
+window.golfDownload = function (fileName, contentType, base64) {
+    var link = document.createElement('a');
+    link.href = 'data:' + contentType + ';base64,' + base64;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+};

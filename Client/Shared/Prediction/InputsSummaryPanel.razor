@@ -1,0 +1,62 @@
+<div class="small">
+    <dl class="row mb-2">
+        <dt class="col-5">Tournament</dt>
+        <dd class="col-7">@Summary.TournamentName <span class="text-muted">(@Summary.TournamentId, @Summary.EventType)</span></dd>
+        <dt class="col-5">Cut</dt>
+        <dd class="col-7">@(Summary.HasCut ? $"Top {Summary.CutTopN} and ties after R2" : "No cut")</dd>
+        <dt class="col-5">Field size</dt>
+        <dd class="col-7">@Summary.FieldSize</dd>
+        <dt class="col-5">Data as of</dt>
+        <dd class="col-7">@(Summary.DataAsOfUtc?.ToLocalTime().ToString("g") ?? "–")</dd>
+        <dt class="col-5">Stats vs. performance</dt>
+        <dd class="col-7">@Summary.Performance.StatsWeightPercent% / @Summary.Performance.PerformanceWeightPercent%</dd>
+        <dt class="col-5">Current / recent / historical</dt>
+        <dd class="col-7">@Summary.Performance.CurrentWeightPercent% / @Summary.Performance.RecentWeightPercent% / @Summary.Performance.HistoricalWeightPercent%</dd>
+        <dt class="col-5">Events from DB / API</dt>
+        <dd class="col-7">@Summary.Performance.EventsFromDb / @Summary.Performance.EventsFromApi</dd>
+    </dl>
+
+    @if (Summary.Stats.Count > 0)
+    {
+        <div class="fw-semibold">Stats</div>
+        <ul class="mb-2">
+            @foreach (var s in Summary.Stats)
+            {
+                <li>@s.Name — @s.WeightPercent% <span class="text-muted">(@s.Source)</span></li>
+            }
+        </ul>
+    }
+
+    @if (Summary.Warnings.Count > 0)
+    {
+        <div class="alert alert-warning py-1 mb-2">
+            <ul class="mb-0 ps-3">
+                @foreach (var w in Summary.Warnings)
+                {
+                    <li>@w</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <details>
+        <summary>Per-golfer events used</summary>
+        <ul class="mt-1">
+            @foreach (var g in Summary.Golfers)
+            {
+                <li>
+                    <strong>@g.PlayerName</strong>@(g.ExplicitEvents ? " (custom selection)" : "")
+                    — @g.Events.Count event(s), @g.Events.Sum(e => e.Rounds) round(s)@(g.CurrentRounds > 0 ? $", {g.CurrentRounds} current round(s)" : "")
+                    @if (g.Events.Count > 0)
+                    {
+                        <div class="text-muted">@string.Join(", ", g.Events.Select(e => $"{e.Name} ({e.Rounds}R)"))</div>
+                    }
+                </li>
+            }
+        </ul>
+    </details>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public InputsSummary Summary { get; set; } = new();
+}

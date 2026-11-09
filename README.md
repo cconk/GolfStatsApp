@@ -6,6 +6,9 @@ Fantasy and other golf stats and visualization
 - Accounts, private leagues (join codes), snake drafts and a leaderboard
 - Installable PWA, dark mode, mobile-friendly tables
 - CSV / Excel export of stats tables and league leaderboards
+- Predictive Modeling (`/predictive-modeling`): Monte Carlo simulation (1–10,000 runs, optional seed) of golfer finishes,
+  cut/win/top-N probabilities and score ranges from selected season stats and per-golfer event/round performances.
+  See [docs/predictive-modeling-model.md](docs/predictive-modeling-model.md).
 
 ## Development
 - Requires the .NET 10 SDK.

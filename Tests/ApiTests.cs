@@ -19,6 +19,7 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.ConfigureAppConfiguration((_, config) =>
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["DatabaseProvider"] = "Sqlite",
                 ["ConnectionStrings:Default"] = $"Data Source={_dbPath}",
                 ["Admin:Emails:0"] = "admin@example.com"
             }));
